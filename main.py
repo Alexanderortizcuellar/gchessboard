@@ -1,6 +1,7 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QPushButton
 from src.board import BoardView
+from src.promotion import PromotionDialog
 import chess
 
 class MainWindow(QMainWindow):
@@ -53,11 +54,23 @@ class MainWindow(QMainWindow):
         )
 
     def handle_move(self, move):
-        # Validation and move application is handled here (external to the widget)
-        if self.game.piece_at(move.from_square).piece_type == chess.PAWN:
-            if (chess.square_rank(move.to_square) == 7 and self.game.turn == chess.WHITE) or \
-               (chess.square_rank(move.to_square) == 0 and self.game.turn == chess.BLACK):
-                move.promotion = chess.QUEEN
+        # Check for promotion
+        piece = self.game.piece_at(move.from_square)
+        if piece and piece.piece_type == chess.PAWN:
+            is_promotion = (chess.square_rank(move.to_square) == 7 and piece.color == chess.WHITE) or \
+                           (chess.square_rank(move.to_square) == 0 and piece.color == chess.BLACK)
+            
+            if is_promotion and not move.promotion:
+                # Show dialog if it's our turn
+                if self.game.turn == piece.color:
+                    dialog = PromotionDialog(piece.color, self)
+                    promo_type = [chess.QUEEN] # Use list for closure
+                    dialog.pieceSelected.connect(lambda t: promo_type.__setitem__(0, t))
+                    dialog.exec_()
+                    move.promotion = promo_type[0]
+                else:
+                    # Premoves default to Queen
+                    move.promotion = chess.QUEEN
 
         if move in self.game.legal_moves:
             self.game.push(move)
