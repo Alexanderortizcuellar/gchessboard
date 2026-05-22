@@ -60,7 +60,7 @@ class MainWindow(QMainWindow):
             is_promotion = (chess.square_rank(move.to_square) == 7 and piece.color == chess.WHITE) or \
                            (chess.square_rank(move.to_square) == 0 and piece.color == chess.BLACK)
             
-            if is_promotion and not move.promotion:
+            if is_promotion:
                 # Show dialog if it's our turn
                 if self.game.turn == piece.color:
                     dialog = PromotionDialog(piece.color, self)
@@ -69,8 +69,9 @@ class MainWindow(QMainWindow):
                     dialog.exec_()
                     move.promotion = promo_type[0]
                 else:
-                    # Premoves default to Queen
-                    move.promotion = chess.QUEEN
+                    # Premoves default to Queen if not already set
+                    if not move.promotion:
+                        move.promotion = chess.QUEEN
 
         if move in self.game.legal_moves:
             self.game.push(move)
