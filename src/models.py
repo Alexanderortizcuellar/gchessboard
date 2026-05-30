@@ -32,3 +32,11 @@ class BoardState:
     movable: MovableConfig = field(default_factory=MovableConfig)
     premoves: list[chess.Move] = field(default_factory=list)
     premovable: PremoveConfig = field(default_factory=PremoveConfig)
+    theme: dict = field(default_factory=lambda: {
+        "light": "#dee3e6",
+        "dark": "#8ca2ad",
+        "lastMove": "rgba(255, 255, 0, 0.5)",
+        "selected": "rgba(0, 0, 255, 0.4)",
+        "check": "rgba(255, 0, 0, 0.8)",
+        "premove": "rgba(20, 100, 200, 0.5)"
+    })

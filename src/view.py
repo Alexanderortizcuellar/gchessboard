@@ -91,7 +91,7 @@ class BoardView(QGraphicsView):
 
     def update_board(self, instant_square: Optional[chess.Square] = None):
         sq = instant_square if instant_square is not None else self._suppress_anim_square
-        self.scene().setup_board(self._square_size, self._state.orientation)
+        self.scene().setup_board(self._square_size, self._state.orientation, self._state.theme)
         
         self._prune_premoves()
         visual_board = self.get_visual_board()
@@ -128,6 +128,10 @@ class BoardView(QGraphicsView):
                 self._state.last_move = value
             elif key == "selected":
                 self._state.selected = value
+            elif key == "theme" and isinstance(value, dict):
+                new_theme = self._state.theme.copy()
+                new_theme.update(value)
+                self._state.theme = new_theme
             elif key == "movable" and isinstance(value, dict):
                 for mkey, mvalue in value.items():
                     if hasattr(self._state.movable, mkey):
