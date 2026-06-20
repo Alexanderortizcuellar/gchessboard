@@ -1,5 +1,5 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QPushButton
+from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QPushButton, QDialog
 from src.board import BoardView
 from src.promotion import PromotionDialog
 import chess
@@ -66,7 +66,9 @@ class MainWindow(QMainWindow):
                     dialog = PromotionDialog(piece.color, self)
                     promo_type = [chess.QUEEN] # Use list for closure
                     dialog.pieceSelected.connect(lambda t: promo_type.__setitem__(0, t))
-                    dialog.exec_()
+                    if dialog.exec_() == QDialog.Rejected:
+                        self.update_board_config()
+                        return
                     move.promotion = promo_type[0]
                 else:
                     # Premoves default to Queen if not already set

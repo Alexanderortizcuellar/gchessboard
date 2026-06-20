@@ -1,9 +1,19 @@
 import chess
+import chess.svg
 from PyQt5.QtWidgets import QDialog, QHBoxLayout, QPushButton, QVBoxLayout, QLabel
-from PyQt5.QtCore import pyqtSignal, Qt
-from PyQt5.QtGui import QIcon
-import os
+from PyQt5.QtCore import pyqtSignal, Qt, QByteArray, QSize
+from PyQt5.QtGui import QIcon, QPixmap, QPainter
+from PyQt5.QtSvg import QSvgRenderer
 
+def get_piece_icon(piece: chess.Piece, size: int = 45) -> QIcon:
+    svg_data = chess.svg.piece(piece, size=size).encode("utf-8")
+    renderer = QSvgRenderer(QByteArray(svg_data))
+    pixmap = QPixmap(size, size)
+    pixmap.fill(Qt.transparent)
+    painter = QPainter(pixmap)
+    renderer.render(painter)
+    painter.end()
+    return QIcon(pixmap)
 class PromotionDialog(QDialog):
     """
     An independent promotion dialog that emits a signal when a piece is selected.
@@ -38,16 +48,15 @@ class PromotionDialog(QDialog):
             btn.setFixedSize(60, 60)
             btn.setCursor(Qt.PointingHandCursor)
             
-            # Simple styling, in a real app you'd use icons from the piece set
-            btn.setText(char.upper())
+            piece = chess.Piece(p_type, color)
+            btn.setIcon(get_piece_icon(piece, size=45))
+            btn.setIconSize(QSize(45, 45))
+            
             btn.setStyleSheet(f"""
                 QPushButton {{
                     background-color: #f0f0f0;
                     border: 2px solid #555;
                     border-radius: 5px;
-                    font-size: 24px;
-                    font-weight: bold;
-                    color: {'#333' if color == chess.WHITE else '#000'};
                 }}
                 QPushButton:hover {{
                     background-color: #ddd;
