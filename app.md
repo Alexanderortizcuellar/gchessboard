@@ -53,6 +53,7 @@ Updates the widget state and refreshes the display.
 - `fen`: str - The board position in FEN format.
 - `orientation`: chess.Color - `chess.WHITE` or `chess.BLACK`.
 - `viewOnly`: bool - If true, interactions are disabled.
+- `editable`: bool - If true, enables position editor mode. Pieces can be dragged and dropped anywhere to configure the position, and dragging a piece off the board deletes it. In this mode, only drag-and-drop is supported (click-to-move is disabled), and all legal move logic/highlights are bypassed. Drag-and-drop operations or API calls will update the internal FEN directly and emit `fenChanged` and `pieceDropped`.
 - `lastMove`: Optional[chess.Move] - Highlight the last move.
 - `selected`: Optional[chess.Square] - Programmatically select a square.
 - `movable`: dict - Configuration for piece movement:
@@ -63,9 +64,20 @@ Updates the widget state and refreshes the display.
   - `enabled`: bool.
   - `duration`: int (ms).
 
+### Methods
+
+#### `.setpiece_at(square, piece, color=None)` / `.set_piece_at(square, piece, color=None)`
+
+Sets or clears a piece at a given square.
+
+- `square`: `chess.Square` (0 to 63).
+- `piece`: Can be a `chess.Piece` object, a string symbol (e.g. `'P'` for White Pawn, `'q'` for Black Queen), a `chess.PieceType` integer (e.g. `chess.PAWN`), or `None` to remove the piece.
+- `color`: `chess.Color` (optional, defaults to `chess.WHITE` if `piece` is a `chess.PieceType` integer).
+
 ### Signals
 
-- `moveMade(chess.Move)`: Emitted when a user completes a move (drag-and-drop or click-click).
+- `moveMade(chess.Move)`: Emitted when a user completes a move (drag-and-drop or click-click) in standard mode.
+- `pieceDropped(chess.Move)`: Emitted when a piece is dropped on the board, used predominantly in editable mode.
 - `squareClicked(chess.Square)`: Emitted when any square is clicked.
 - `fenChanged(str)`: Emitted when the FEN state changes.
 - `selectionChanged(Optional[chess.Square])`: Emitted when the selected square changes.

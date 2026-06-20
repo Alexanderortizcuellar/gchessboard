@@ -23,6 +23,7 @@ class BoardView(QGraphicsView):
         self.setRenderHint(QPainter.SmoothPixmapTransform)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setAcceptDrops(True)
 
         self._state = BoardState()
         self._square_size = 60
@@ -38,6 +39,8 @@ class BoardView(QGraphicsView):
 
     def get_visual_board(self) -> chess.Board:
         """Returns the board state predicted by the current queue of premoves."""
+        if self._state.editable:
+            return chess.Board(self._state.fen)
         board = chess.Board(self._state.fen)
         color = self._state.movable.color
         
@@ -70,6 +73,8 @@ class BoardView(QGraphicsView):
 
     def _prune_premoves(self):
         """Validates and prunes the premove queue against the true board state."""
+        if self._state.editable:
+            return
         board = chess.Board(self._state.fen)
         color = self._state.movable.color
         if color is None: return
@@ -96,11 +101,16 @@ class BoardView(QGraphicsView):
         self._prune_premoves()
         visual_board = self.get_visual_board()
         
+        anim_config = self._state.animation
+        if self._state.editable:
+            from .models import AnimationConfig
+            anim_config = AnimationConfig(enabled=False)
+
         fen_changed = self.scene().set_fen(
             visual_board.fen(),
             self._square_size,
             self._state.orientation,
-            self._state.animation,
+            anim_config,
             sq,
         )
         self.scene().update_highlights(
@@ -128,6 +138,8 @@ class BoardView(QGraphicsView):
                 self._state.last_move = value
             elif key == "selected":
                 self._state.selected = value
+            elif key == "editable":
+                self._state.editable = value
             elif key == "movable" and isinstance(value, dict):
                 for mkey, mvalue in value.items():
                     if hasattr(self._state.movable, mkey):
@@ -146,6 +158,9 @@ class BoardView(QGraphicsView):
         self.update_board()
 
     def _handle_fen_change(self):
+        if self._state.editable:
+            self._state.last_sent_premove = None
+            return
         board = chess.Board(self._state.fen)
         is_our_turn = self._state.movable.color is None or board.turn == self._state.movable.color
         
@@ -190,6 +205,34 @@ class BoardView(QGraphicsView):
     def set_view_only(self, enabled: bool):
         self._state.view_only = enabled
 
+    def setpiece_at(self, square: chess.Square, piece: Optional[chess.Piece], color: Optional[chess.Color] = None):
+        """Sets a piece at a given square. 
+        Accepts:
+            - square: a chess.Square (0 to 63)
+            - piece: chess.Piece, string symbol (e.g. 'P', 'q'), chess.PieceType integer, or None to remove
+            - color: chess.Color (optional, used if piece is a chess.PieceType integer)
+        """
+        if piece is None:
+            p_obj = None
+        elif isinstance(piece, chess.Piece):
+            p_obj = piece
+        elif isinstance(piece, str):
+            p_obj = chess.Piece.from_symbol(piece)
+        elif isinstance(piece, int):
+            if color is None:
+                color = chess.WHITE
+            p_obj = chess.Piece(piece, color)
+        else:
+            p_obj = piece
+
+        board = chess.Board(self._state.fen)
+        board.set_piece_at(square, p_obj)
+        self.set(fen=board.fen())
+
+    def set_piece_at(self, square: chess.Square, piece: Optional[chess.Piece], color: Optional[chess.Color] = None):
+        """Alias for setpiece_at."""
+        self.setpiece_at(square, piece, color)
+
     def mousePressEvent(self, event):
         if self._state.view_only:
             super().mousePressEvent(event)
@@ -210,34 +253,25 @@ class BoardView(QGraphicsView):
             self.squareClicked.emit(square)
 
             piece_item = self.scene().piece_items.get(square)
-            visual_board = self.get_visual_board()
-            true_board = chess.Board(self._state.fen)
-            is_our_turn = self._state.movable.color is None or true_board.turn == self._state.movable.color
-            can_select = self._can_move_piece(square, visual_board)
+            
+            if self._state.editable:
+                if piece_item:
+                    self._start_drag(square, piece_item)
+            else:
+                visual_board = self.get_visual_board()
+                true_board = chess.Board(self._state.fen)
+                is_our_turn = self._state.movable.color is None or true_board.turn == self._state.movable.color
+                can_select = self._can_move_piece(square, visual_board)
 
-            if self._click_origin is not None:
-                if square == self._click_origin:
-                    if piece_item and can_select:
-                        self._start_drag(square, piece_item)
-                else:
-                    move = self._create_move(self._click_origin, square, visual_board)
-                    if is_our_turn and not self._state.premoves:
-                        if self._is_move_valid(move, visual_board):
-                            self.moveMade.emit(move)
-                            self._click_origin = None
-                            self._state.selected = None
-                        else:
-                            if piece_item and can_select:
-                                self._click_origin = square
-                                self._state.selected = square
-                                self._start_drag(square, piece_item)
-                            else:
-                                self._click_origin = None
-                                self._state.selected = None
+                if self._click_origin is not None:
+                    if square == self._click_origin:
+                        if piece_item and can_select:
+                            self._start_drag(square, piece_item)
                     else:
-                        if self._state.premovable.enabled:
-                            if move in visual_board.legal_moves:
-                                self._state.premoves.append(move)
+                        move = self._create_move(self._click_origin, square, visual_board)
+                        if is_our_turn and not self._state.premoves:
+                            if self._is_move_valid(move, visual_board):
+                                self.moveMade.emit(move)
                                 self._click_origin = None
                                 self._state.selected = None
                             else:
@@ -249,13 +283,27 @@ class BoardView(QGraphicsView):
                                     self._click_origin = None
                                     self._state.selected = None
                         else:
-                            self._click_origin = None
-                            self._state.selected = None
-            else:
-                if piece_item and can_select:
-                    self._click_origin = square
-                    self._state.selected = square
-                    self._start_drag(square, piece_item)
+                            if self._state.premovable.enabled:
+                                if move in visual_board.legal_moves:
+                                    self._state.premoves.append(move)
+                                    self._click_origin = None
+                                    self._state.selected = None
+                                else:
+                                    if piece_item and can_select:
+                                        self._click_origin = square
+                                        self._state.selected = square
+                                        self._start_drag(square, piece_item)
+                                    else:
+                                        self._click_origin = None
+                                        self._state.selected = None
+                            else:
+                                self._click_origin = None
+                                self._state.selected = None
+                else:
+                    if piece_item and can_select:
+                        self._click_origin = square
+                        self._state.selected = square
+                        self._start_drag(square, piece_item)
 
             self.selectionChanged.emit(self._state.selected)
             self.update_board()
@@ -287,45 +335,121 @@ class BoardView(QGraphicsView):
         if self._drag_piece:
             pos = event.pos()
             dest_square = self.get_square_at(pos)
-            visual_board = self.get_visual_board()
-            true_board = chess.Board(self._state.fen)
-            is_our_turn = self._state.movable.color is None or true_board.turn == self._state.movable.color
 
-            if dest_square is not None and dest_square != self._drag_start_square:
-                move = self._create_move(self._drag_start_square, dest_square, visual_board)
-                
-                if is_our_turn and not self._state.premoves:
-                    if self._is_move_valid(move, visual_board):
-                        self._suppress_anim_square = dest_square
-                        self.moveMade.emit(move)
-                        self.pieceDropped.emit(move)
-                        self._click_origin = None
-                        self._state.selected = None
-                        self.update_board(instant_square=dest_square)
-                    else:
-                        self._drag_piece.setPos(self._drag_start_pos)
-                else:
-                    if self._state.premovable.enabled:
-                        if move in visual_board.legal_moves:
-                            self._state.premoves.append(move)
+            if self._state.editable:
+                board = chess.Board(self._state.fen)
+                piece = board.piece_at(self._drag_start_square)
+                start_sq = self._drag_start_square
+                if piece:
+                    if dest_square is not None:
+                        if dest_square != self._drag_start_square:
+                            board.remove_piece_at(self._drag_start_square)
+                            board.set_piece_at(dest_square, piece)
+                            self._state.fen = board.fen()
+                            self._suppress_anim_square = dest_square
+                            
+                            self._drag_piece.setZValue(0)
+                            self._drag_piece = None
+                            self._drag_start_square = None
+                            self._state.dragging = False
+                            
+                            self.update_board(instant_square=dest_square)
+                            
+                            self.fenChanged.emit(self._state.fen)
+                            self.pieceDropped.emit(chess.Move(start_sq, dest_square))
                             self._click_origin = None
                             self._state.selected = None
-                            target_pos = self.scene().get_square_pos(dest_square, self._square_size, self._state.orientation)
-                            self._drag_piece.setPos(target_pos)
+                        else:
+                            self._drag_piece.setPos(self._drag_start_pos)
+                            self._drag_piece.setZValue(0)
+                            self._drag_piece = None
+                            self._drag_start_square = None
+                            self._state.dragging = False
+                            self.update_board()
+                    else:
+                        # Dragged off the board - delete the piece
+                        board.remove_piece_at(self._drag_start_square)
+                        self._state.fen = board.fen()
+                        
+                        self._drag_piece.setZValue(0)
+                        self._drag_piece = None
+                        self._drag_start_square = None
+                        self._state.dragging = False
+                        
+                        self.update_board()
+                        
+                        self.fenChanged.emit(self._state.fen)
+                        self._click_origin = None
+                        self._state.selected = None
+            else:
+                visual_board = self.get_visual_board()
+                true_board = chess.Board(self._state.fen)
+                is_our_turn = self._state.movable.color is None or true_board.turn == self._state.movable.color
+
+                if dest_square is not None and dest_square != self._drag_start_square:
+                    move = self._create_move(self._drag_start_square, dest_square, visual_board)
+                    
+                    if is_our_turn and not self._state.premoves:
+                        if self._is_move_valid(move, visual_board):
+                            self._suppress_anim_square = dest_square
+                            self.moveMade.emit(move)
+                            self.pieceDropped.emit(move)
+                            self._click_origin = None
+                            self._state.selected = None
+                            self.update_board(instant_square=dest_square)
                         else:
                             self._drag_piece.setPos(self._drag_start_pos)
                     else:
-                        self._drag_piece.setPos(self._drag_start_pos)
-            else:
-                self._drag_piece.setPos(self._drag_start_pos)
+                        if self._state.premovable.enabled:
+                            if move in visual_board.legal_moves:
+                                self._state.premoves.append(move)
+                                self._click_origin = None
+                                self._state.selected = None
+                                target_pos = self.scene().get_square_pos(dest_square, self._square_size, self._state.orientation)
+                                self._drag_piece.setPos(target_pos)
+                            else:
+                                self._drag_piece.setPos(self._drag_start_pos)
+                        else:
+                            self._drag_piece.setPos(self._drag_start_pos)
+                else:
+                    self._drag_piece.setPos(self._drag_start_pos)
 
-            self._drag_piece.setZValue(0)
-            self._drag_piece = None
-            self._drag_start_square = None
-            self._state.dragging = False
-            self.update_board(instant_square=dest_square if dest_square else None)
+                self._drag_piece.setZValue(0)
+                self._drag_piece = None
+                self._drag_start_square = None
+                self._state.dragging = False
+                self.update_board(instant_square=dest_square if dest_square else None)
 
         super().mouseReleaseEvent(event)
+
+    def dragEnterEvent(self, event):
+        if self._state.editable and event.mimeData().hasText():
+            event.acceptProposedAction()
+        else:
+            super().dragEnterEvent(event)
+
+    def dragMoveEvent(self, event):
+        if self._state.editable and event.mimeData().hasText():
+            event.acceptProposedAction()
+        else:
+            super().dragMoveEvent(event)
+
+    def dropEvent(self, event):
+        if self._state.editable and event.mimeData().hasText():
+            text = event.mimeData().text()
+            pos = event.pos()
+            square = self.get_square_at(pos)
+            if square is not None:
+                try:
+                    piece = chess.Piece.from_symbol(text)
+                    self.setpiece_at(square, piece)
+                    event.acceptProposedAction()
+                except ValueError:
+                    super().dropEvent(event)
+            else:
+                super().dropEvent(event)
+        else:
+            super().dropEvent(event)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

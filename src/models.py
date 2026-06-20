@@ -24,6 +24,7 @@ class BoardState:
     fen: str = chess.STARTING_FEN
     orientation: chess.Color = chess.WHITE
     view_only: bool = False
+    editable: bool = False
     last_move: Optional[chess.Move] = None
     selected: Optional[chess.Square] = None
     dragging: bool = False

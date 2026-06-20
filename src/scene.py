@@ -71,7 +71,7 @@ class BoardScene(QGraphicsScene):
         true_board = chess.Board(state.fen)
 
         # Legal moves (dots or circles)
-        if state.selected and not state.view_only:
+        if state.selected is not None and not state.view_only and not state.editable:
             dests = []
             is_premove = len(state.premoves) > 0 or (state.movable.color is not None and true_board.turn != state.movable.color)
             
@@ -94,7 +94,7 @@ class BoardScene(QGraphicsScene):
             self._add_highlight(state.last_move.from_square, QColor(255, 255, 0, 80), "last_move", square_size, orientation)
             self._add_highlight(state.last_move.to_square, QColor(255, 255, 0, 80), "last_move", square_size, orientation)
 
-        if state.selected:
+        if state.selected is not None:
             self._add_highlight(state.selected, QColor(0, 0, 255, 80), "selected", square_size, orientation)
 
         # Highlight all premoves in the queue
@@ -103,7 +103,7 @@ class BoardScene(QGraphicsScene):
             self._add_highlight(pm.from_square, pm_color, "premove", square_size, orientation)
             self._add_highlight(pm.to_square, pm_color, "premove", square_size, orientation)
 
-        if true_board.is_check():
+        if not state.editable and true_board.is_check():
             king_square = true_board.king(true_board.turn)
             if king_square is not None:
                 self._add_check_highlight(king_square, square_size, orientation)
