@@ -130,7 +130,13 @@ class BoardScene(QGraphicsScene):
             )
 
         if state.selected:
-            self._add_highlight(state.selected, QColor(0, 0, 255, 80), "selected", square_size, orientation)
+            self._add_highlight(
+                state.selected,
+                QColor(0, 0, 255, 80),
+                "selected",
+                square_size,
+                orientation,
+            )
 
         # Highlight all premoves in the queue
         pm_color = parse_color(theme.get("premove", "rgba(20, 100, 200, 0.5)"))

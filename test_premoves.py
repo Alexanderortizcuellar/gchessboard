@@ -1,9 +1,9 @@
-
 import sys
 import chess
 from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QLabel
-from PyQt5.QtCore import  QTimer
+from PyQt5.QtCore import QTimer
 from src.view import BoardView
+
 
 class PremoveTestWindow(QMainWindow):
     def __init__(self):
@@ -18,7 +18,9 @@ class PremoveTestWindow(QMainWindow):
             "3. Every 3s, Black will move automatically.\n"
             "4. Watch your premoves fire one by one!"
         )
-        self.info_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #2c3e50; padding: 10px; background: #ecf0f1;")
+        self.info_label.setStyleSheet(
+            "font-size: 14px; font-weight: bold; color: #2c3e50; padding: 10px; background: #ecf0f1;"
+        )
         layout.addWidget(self.info_label)
 
         self.board_view = BoardView()
@@ -31,8 +33,8 @@ class PremoveTestWindow(QMainWindow):
         self.board = chess.Board()
         self.board_view.set(
             fen=self.board.fen(),
-            movable={'color': chess.WHITE},
-            premovable={'enabled': True, 'showDests': True}
+            movable={"color": chess.WHITE},
+            premovable={"enabled": True, "showDests": True},
         )
 
         self.board_view.moveMade.connect(self.on_move_made)
@@ -45,7 +47,7 @@ class PremoveTestWindow(QMainWindow):
         self.board.push(move)
         self.board_view.set(fen=self.board.fen(), lastMove=move)
         self.info_label.setText("It is BLACK's turn. QUEUE 3 PREMOVES NOW!")
-        
+
         # Schedule 3 Black moves
         QTimer.singleShot(5000, lambda: self.opponent_plays("d7d5"))
         QTimer.singleShot(8000, lambda: self.opponent_plays("c7c6"))
@@ -67,13 +69,17 @@ class PremoveTestWindow(QMainWindow):
         if move in self.board.legal_moves:
             self.board.push(move)
             self.board_view.set(fen=self.board.fen(), lastMove=move)
-            self.info_label.setText(f"You played: {move}. Queue size: {len(self.board_view._state.premoves)}")
+            self.info_label.setText(
+                f"You played: {move}. Queue size: {len(self.board_view._state.premoves)}"
+            )
+
 
 def main():
     app = QApplication(sys.argv)
     window = PremoveTestWindow()
     window.show()
     sys.exit(app.exec_())
+
 
 if __name__ == "__main__":
     main()

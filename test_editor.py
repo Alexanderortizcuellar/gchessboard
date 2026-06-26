@@ -10,12 +10,13 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QLabel,
     QLineEdit,
-    QCheckBox
+    QCheckBox,
 )
 from PyQt5.QtCore import Qt, QSize, QByteArray
 from PyQt5.QtGui import QPixmap, QPainter, QIcon
 from PyQt5.QtSvg import QSvgRenderer
 from src.board import BoardView
+
 
 def get_piece_icon(symbol: str) -> QIcon:
     piece = chess.Piece.from_symbol(symbol)
@@ -50,7 +51,9 @@ class EditorTestWindow(QMainWindow):
             "2. Select a piece from the Palette and click a square to place it.\n"
             "3. Use the buttons below to manipulate the board programmatically."
         )
-        self.info_label.setStyleSheet("padding: 10px; background: #ecf0f1; border-radius: 5px; color: #2c3e50; font-size: 13px;")
+        self.info_label.setStyleSheet(
+            "padding: 10px; background: #ecf0f1; border-radius: 5px; color: #2c3e50; font-size: 13px;"
+        )
         left_layout.addWidget(self.info_label)
         main_layout.addLayout(left_layout, stretch=3)
 
@@ -89,8 +92,18 @@ class EditorTestWindow(QMainWindow):
         self.palette_buttons[None] = clear_btn
 
         pieces_to_add = [
-            ("P", "wP"), ("N", "wN"), ("B", "wB"), ("R", "wR"), ("Q", "wQ"), ("K", "wK"),
-            ("p", "bP"), ("n", "bN"), ("b", "bB"), ("r", "bR"), ("q", "bQ"), ("k", "bK")
+            ("P", "wP"),
+            ("N", "wN"),
+            ("B", "wB"),
+            ("R", "wR"),
+            ("Q", "wQ"),
+            ("K", "wK"),
+            ("p", "bP"),
+            ("n", "bN"),
+            ("b", "bB"),
+            ("r", "bR"),
+            ("q", "bQ"),
+            ("k", "bK"),
         ]
 
         self.selected_piece_symbol = None
@@ -99,7 +112,7 @@ class EditorTestWindow(QMainWindow):
         palette_grid = QVBoxLayout()
         # Add eraser row to palette_grid first
         palette_grid.addLayout(palette_layout)
-        
+
         white_row = QHBoxLayout()
         black_row = QHBoxLayout()
 
@@ -154,7 +167,7 @@ class EditorTestWindow(QMainWindow):
         self.reset_to_starting()
 
     def toggle_edit_mode(self, state):
-        is_editable = (state == Qt.Checked)
+        is_editable = state == Qt.Checked
         self.board_view.set(editable=is_editable)
         self.info_label.setText(f"Editable mode set to: {is_editable}")
 
@@ -163,7 +176,7 @@ class EditorTestWindow(QMainWindow):
         for s, btn in self.palette_buttons.items():
             if btn != clicked_btn:
                 btn.setChecked(False)
-        
+
         if clicked_btn.isChecked():
             self.selected_piece_symbol = sym
         else:
@@ -177,7 +190,7 @@ class EditorTestWindow(QMainWindow):
         elif None in self.palette_buttons and self.palette_buttons[None].isChecked():
             # Eraser mode
             self.board_view.setpiece_at(square, None)
-        
+
         sq_name = chess.square_name(square)
         print(f"Square clicked: {sq_name}")
 
@@ -204,11 +217,13 @@ class EditorTestWindow(QMainWindow):
     def reset_to_starting(self):
         self.board_view.set(fen=chess.STARTING_FEN)
 
+
 def main():
     app = QApplication(sys.argv)
     window = EditorTestWindow()
     window.show()
     sys.exit(app.exec_())
+
 
 if __name__ == "__main__":
     main()

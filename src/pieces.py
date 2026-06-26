@@ -5,6 +5,7 @@ from PyQt5.QtCore import QByteArray, Qt, QRectF
 from PyQt5.QtGui import QPainter
 from typing import Dict, Optional
 
+
 class RendererCache:
     _renderers: Dict[str, QSvgRenderer] = {}
 
@@ -17,13 +18,16 @@ class RendererCache:
             cls._renderers[key] = renderer
         return cls._renderers[key]
 
+
 class PieceItem(QGraphicsSvgItem):
-    def __init__(self, piece: chess.Piece, square: chess.Square, square_size: float, parent=None):
+    def __init__(
+        self, piece: chess.Piece, square: chess.Square, square_size: float, parent=None
+    ):
         super().__init__(parent)
         self.piece = piece
         self.square = square
         self._square_size = square_size
-        
+
         self.setSharedRenderer(RendererCache.get_renderer(piece))
         self._update_scale()
 
