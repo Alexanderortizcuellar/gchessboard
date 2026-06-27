@@ -5,6 +5,7 @@ from PyQt5.QtCore import pyqtSignal, Qt, QByteArray, QSize
 from PyQt5.QtGui import QIcon, QPixmap, QPainter
 from PyQt5.QtSvg import QSvgRenderer
 
+
 def get_piece_icon(piece: chess.Piece, size: int = 45) -> QIcon:
     svg_data = chess.svg.piece(piece, size=size).encode("utf-8")
     renderer = QSvgRenderer(QByteArray(svg_data))
@@ -14,6 +15,8 @@ def get_piece_icon(piece: chess.Piece, size: int = 45) -> QIcon:
     renderer.render(painter)
     painter.end()
     return QIcon(pixmap)
+
+
 class PromotionDialog(QDialog):
     """
     An independent promotion dialog that emits a signal when a piece is selected.
@@ -44,7 +47,7 @@ class PromotionDialog(QDialog):
             (chess.KNIGHT, "n"),
         ]
 
-        color_str = "w" if color == chess.WHITE else "b"
+        #color_str = "w" if color == chess.WHITE else "b"
 
         for p_type, char in promotion_types:
             btn = QPushButton()
@@ -53,8 +56,8 @@ class PromotionDialog(QDialog):
             piece = chess.Piece(p_type, color)
             btn.setIcon(get_piece_icon(piece, size=45))
             btn.setIconSize(QSize(45, 45))
-            
-            btn.setStyleSheet(f"""
+
+            btn.setStyleSheet("""
                 QPushButton {{
                     background-color: #f0f0f0;
                     border: 2px solid #555;
@@ -63,8 +66,7 @@ class PromotionDialog(QDialog):
                 QPushButton:hover {{
                     background-color: #ddd;
                 }}
-            """
-            )
+            """)
 
             # Closure to capture p_type
             btn.clicked.connect(lambda checked, t=p_type: self._on_piece_selected(t))
