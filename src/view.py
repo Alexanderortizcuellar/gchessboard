@@ -4,7 +4,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, QTimer
 from PyQt5.QtGui import QPainter
 from typing import Optional
 
-from .models import BoardState
+from .models import BoardState, BoardHighlight, BoardShape
 from .scene import BoardScene, SquareItem
 from .pieces import PieceItem
 
@@ -140,6 +140,32 @@ class BoardView(QGraphicsView):
                 self._state.selected = value
             elif key == "editable":
                 self._state.editable = value
+            elif key == "drawShapes":
+                self._state.draw_shapes = value
+            elif key == "customHighlights" and isinstance(value, dict):
+                self._state.custom_highlights = {}
+                for sq, col in value.items():
+                    parsed_sq = chess.parse_square(sq) if isinstance(sq, str) else sq
+                    if isinstance(col, str):
+                        self._state.custom_highlights[parsed_sq] = BoardHighlight(color=col, square=parsed_sq)
+                    elif isinstance(col, BoardHighlight):
+                        self._state.custom_highlights[parsed_sq] = col
+                    elif isinstance(col, dict):
+                        parsed_color = col.get("color", "rgba(255, 0, 0, 0.5)")
+                        self._state.custom_highlights[parsed_sq] = BoardHighlight(color=parsed_color, square=parsed_sq)
+            elif key == "shapes" and isinstance(value, list):
+                parsed_shapes = []
+                for s in value:
+                    if isinstance(s, dict):
+                        s_copy = s.copy()
+                        if "orig" in s_copy and isinstance(s_copy["orig"], str):
+                            s_copy["orig"] = chess.parse_square(s_copy["orig"])
+                        if "dest" in s_copy and isinstance(s_copy["dest"], str):
+                            s_copy["dest"] = chess.parse_square(s_copy["dest"])
+                        parsed_shapes.append(BoardShape(**s_copy))
+                    elif isinstance(s, BoardShape):
+                        parsed_shapes.append(s)
+                self._state.shapes = parsed_shapes
             elif key == "theme" and isinstance(value, dict):
                 new_theme = self._state.theme.copy()
                 new_theme.update(value)
@@ -161,7 +187,11 @@ class BoardView(QGraphicsView):
 
         self.update_board()
 
-    def _handle_fen_change(self):
+    def _handle_fen_change(self, shapes_passed=False, highlights_passed=False):
+        if not shapes_passed:
+            self._state.shapes.clear()
+        if not highlights_passed:
+            self._state.custom_highlights.clear()
         if self._state.editable:
             self._state.last_sent_premove = None
             return
@@ -197,6 +227,8 @@ class BoardView(QGraphicsView):
             board.push(move)
             self._state.fen = board.fen()
             self._state.last_move = move
+            self._state.shapes.clear()
+            self._state.custom_highlights.clear()
             self.update_board()
             self.moveMade.emit(move)
 
@@ -246,12 +278,33 @@ class BoardView(QGraphicsView):
         square = self.get_square_at(pos)
 
         if event.button() == Qt.RightButton:
-            self._state.premoves.clear()
-            self._state.selected = None
-            self._click_origin = None
-            self._suppress_anim_square = None
-            self.update_board()
-            return
+            if not self._state.draw_shapes:
+                self._state.premoves.clear()
+                self._state.selected = None
+                self._click_origin = None
+                self._suppress_anim_square = None
+                self.update_board()
+                return
+            else:
+                self._right_click_start_square = square
+                self._is_drawing_shape = True
+                self._current_draw_target_square = square
+                if square is not None:
+                    self._state.preview_shape = BoardShape(
+                        type="circle",
+                        orig=square,
+                        color="rgba(21, 128, 61, 0.6)",
+                        width=4.0
+                    )
+                    self.update_board()
+                event.accept()
+                return
+
+        if event.button() == Qt.LeftButton:
+            if self._state.shapes or self._state.custom_highlights:
+                self._state.shapes.clear()
+                self._state.custom_highlights.clear()
+                self.update_board()
 
         if event.button() == Qt.LeftButton and square is not None:
             self.squareClicked.emit(square)
@@ -333,9 +386,71 @@ class BoardView(QGraphicsView):
                 0, min(pos.y() - self._square_size / 2, max_coord - self._square_size)
             )
             self._drag_piece.setPos(x, y)
+        elif getattr(self, "_is_drawing_shape", False):
+            current_square = self.get_square_at(event.pos())
+            if current_square != getattr(self, "_current_draw_target_square", None):
+                self._current_draw_target_square = current_square
+                if current_square is not None and self._right_click_start_square is not None:
+                    if current_square == self._right_click_start_square:
+                        self._state.preview_shape = BoardShape(
+                            type="circle",
+                            orig=self._right_click_start_square,
+                            color="rgba(21, 128, 61, 0.6)",
+                            width=4.0
+                        )
+                    else:
+                        self._state.preview_shape = BoardShape(
+                            type="arrow",
+                            orig=self._right_click_start_square,
+                            dest=current_square,
+                            color="rgba(21, 128, 61, 0.6)",
+                            width=4.0
+                        )
+                else:
+                    self._state.preview_shape = None
+                self.update_board()
+
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
+        if event.button() == Qt.RightButton and getattr(self, "_is_drawing_shape", False):
+            self._is_drawing_shape = False
+            self._state.preview_shape = None
+            
+            end_square = self.get_square_at(event.pos())
+            if self._right_click_start_square is not None and end_square is not None:
+                if self._right_click_start_square == end_square:
+                    existing = [s for s in self._state.shapes if s.type == "circle" and s.orig == end_square]
+                    if existing:
+                        for s in existing:
+                            self._state.shapes.remove(s)
+                    else:
+                        self._state.shapes.append(BoardShape(
+                            type="circle",
+                            orig=end_square,
+                            color="rgba(21, 128, 61, 0.6)",
+                            width=4.0
+                        ))
+                else:
+                    existing = [s for s in self._state.shapes if s.type == "arrow" and s.orig == self._right_click_start_square and s.dest == end_square]
+                    if existing:
+                        for s in existing:
+                            self._state.shapes.remove(s)
+                    else:
+                        self._state.shapes.append(BoardShape(
+                            type="arrow",
+                            orig=self._right_click_start_square,
+                            dest=end_square,
+                            color="rgba(21, 128, 61, 0.6)",
+                            width=4.0
+                        ))
+            
+            self._right_click_start_square = None
+            self._current_draw_target_square = None
+            self.update_board()
+            event.accept()
+            return
+
         if self._drag_piece:
             pos = event.pos()
             dest_square = self.get_square_at(pos)

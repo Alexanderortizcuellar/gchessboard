@@ -1,6 +1,6 @@
 import chess
 from dataclasses import dataclass, field
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 
 @dataclass
 class AnimationConfig:
@@ -20,6 +20,19 @@ class PremoveConfig:
     castle: bool = True
 
 @dataclass
+class BoardHighlight:
+    color: str  # rgba or hex string
+    square: chess.Square
+
+@dataclass
+class BoardShape:
+    type: str  # "arrow", "circle", or "cross"
+    orig: chess.Square
+    dest: Optional[chess.Square] = None  # None for circles/crosses
+    color: str = "rgba(255, 0, 0, 0.5)"
+    width: float = 4.0
+
+@dataclass
 class BoardState:
     fen: str = chess.STARTING_FEN
     orientation: chess.Color = chess.WHITE
@@ -33,6 +46,10 @@ class BoardState:
     movable: MovableConfig = field(default_factory=MovableConfig)
     premoves: list[chess.Move] = field(default_factory=list)
     premovable: PremoveConfig = field(default_factory=PremoveConfig)
+    custom_highlights: Dict[chess.Square, BoardHighlight] = field(default_factory=dict)
+    shapes: List[BoardShape] = field(default_factory=list)
+    draw_shapes: bool = True
+    preview_shape: Optional[BoardShape] = None
     theme: dict = field(default_factory=lambda: {
         "light": "#dee3e6",
         "dark": "#8ca2ad",
