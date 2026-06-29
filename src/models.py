@@ -2,10 +2,12 @@ import chess
 from dataclasses import dataclass, field
 from typing import Optional, Dict, List
 
+
 @dataclass
 class AnimationConfig:
     enabled: bool = True
     duration: int = 200
+
 
 @dataclass
 class MovableConfig:
@@ -13,11 +15,13 @@ class MovableConfig:
     color: Optional[chess.Color] = None
     dests: Optional[Dict[chess.Square, list[chess.Square]]] = None
 
+
 @dataclass
 class PremoveConfig:
     enabled: bool = True
     showDests: bool = True
     castle: bool = True
+
 
 @dataclass
 class BoardHighlight:
@@ -50,11 +54,13 @@ class BoardState:
     shapes: List[BoardShape] = field(default_factory=list)
     draw_shapes: bool = True
     preview_shape: Optional[BoardShape] = None
-    theme: dict = field(default_factory=lambda: {
-        "light": "#dee3e6",
-        "dark": "#8ca2ad",
-        "lastMove": "rgba(255, 255, 0, 0.5)",
-        "selected": "rgba(0, 0, 255, 0.4)",
-        "check": "rgba(255, 0, 0, 0.8)",
-        "premove": "rgba(20, 100, 200, 0.5)"
-    })
+    theme: dict = field(
+        default_factory=lambda: {
+            "light": "#dee3e6",
+            "dark": "#8ca2ad",
+            "lastMove": "rgba(255, 255, 0, 0.5)",
+            "selected": "rgba(0, 0, 255, 0.4)",
+            "check": "rgba(255, 0, 0, 0.8)",
+            "premove": "rgba(20, 100, 200, 0.5)",
+        }
+    )
