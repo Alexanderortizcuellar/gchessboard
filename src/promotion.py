@@ -82,8 +82,12 @@ class PromotionDialog(QDialog):
 def get_promotion_piece(color: chess.Color, parent=None) -> chess.PieceType:
     """Helper function to show the dialog and return the selected piece type."""
     dialog = PromotionDialog(color, parent)
-    if dialog.exec_() == QDialog.Accepted:
-        # Note: This helper might need a way to pass the result back if not using signals
-        # But the requirement asked for signals.
-        pass
-    return chess.QUEEN  # Default fallback
+    selected_piece = chess.QUEEN
+
+    def set_selected(t):
+        nonlocal selected_piece
+        selected_piece = t
+
+    dialog.pieceSelected.connect(set_selected)
+    dialog.exec_()
+    return selected_piece
