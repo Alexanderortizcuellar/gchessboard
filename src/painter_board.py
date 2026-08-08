@@ -245,6 +245,17 @@ class PainterChessBoard(QWidget):
                 old_fen = self._state.fen
                 self._state.fen = value
                 if old_fen != value:
+                    # Trigger animation before _handle_fen_change clears state.
+                    # Skip if the destination square was just dragged there
+                    # (_suppress_anim_square is set by mouseReleaseEvent).
+                    if (
+                        self._state.animation.enabled
+                        and not self._state.editable
+                        and old_fen is not None
+                    ):
+                        self._try_start_move_animation(
+                            chess.Board(old_fen), chess.Board(value)
+                        )
                     self._handle_fen_change()
             elif key == "orientation":
                 self._state.orientation = value
@@ -609,6 +620,11 @@ class PainterChessBoard(QWidget):
                 break
 
         if from_sq is not None and to_sq is not None and piece is not None:
+            if to_sq == self._suppress_anim_square:
+                # Piece was just dragged here — no animation needed
+                self._suppress_anim_square = None
+                return
+            self._suppress_anim_square = None
             self._start_animation(from_sq, to_sq, piece)
 
     # -----------------------------------------------------------------------
