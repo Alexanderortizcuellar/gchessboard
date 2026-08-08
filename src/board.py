@@ -1,5 +1,5 @@
-from .models import BoardState, AnimationConfig, MovableConfig
-from .view import BoardView
+from .models import AnimationConfig, BoardState, MovableConfig
 from .scene import BoardScene
+from .view import BoardView
 
-__all__ = ["BoardState", "AnimationConfig", "MovableConfig", "BoardView", "BoardScene"]
+__all__ = ["AnimationConfig", "BoardScene", "BoardState", "BoardView", "MovableConfig"]
