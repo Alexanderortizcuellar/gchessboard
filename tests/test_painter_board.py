@@ -24,17 +24,14 @@ Covers:
   20. Verify existing main tests not broken (import sanity check)
 """
 
-import sys
-import os
 import chess
 import pytest
 
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QPointF, Qt
 
-sys.path.insert(0, os.path.dirname(__file__))
-
-from src.board import PainterChessBoard, BoardView
+from src.painter_board import PainterChessBoard
+from src.board import BoardView
 from src.models import BoardState, BoardShape, BoardHighlight
 
 
