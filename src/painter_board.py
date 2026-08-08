@@ -1035,13 +1035,6 @@ class PainterChessBoard(QWidget):
                             move = self._create_move(self._click_origin, square, visual_board)
                             if is_our_turn and not self._state.premoves:
                                 if self._is_move_valid(move, visual_board):
-                                    old_board = chess.Board(self._state.fen)
-                                    self._suppress_anim_square = move.to_square
-                                    anim_cfg = self._state.animation
-                                    if anim_cfg.enabled:
-                                        piece = old_board.piece_at(move.from_square)
-                                        if piece and move.to_square != self._suppress_anim_square:
-                                            self._start_animation(move.from_square, move.to_square, piece)
                                     self.moveMade.emit(move)
                                     self._click_origin = None
                                     self._state.selected = None
