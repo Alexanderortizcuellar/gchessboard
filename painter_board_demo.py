@@ -30,7 +30,8 @@ import os
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from src.board import BoardView, PainterChessBoard
+from src.board import BoardView
+from src.painter_board import  PainterChessBoard
 
 
 class DemoWindow(QMainWindow):
