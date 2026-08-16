@@ -2,7 +2,6 @@ import sys
 import chess
 from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QPushButton
 from src.board import BoardView
-from src.models import BoardHighlight, BoardShape
 
 class ShapesTestWindow(QMainWindow):
     def __init__(self):

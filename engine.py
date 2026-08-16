@@ -61,9 +61,9 @@ class ChessEngine(QtCore.QProcess):
     ):
         self.send_command(f"position fen {position}")
         if mode == "depth":
-            self.send_command(f"go depth {options.get("depth")}")
+            self.send_command(f"go depth {options.get('depth')}")
         elif mode == "time":
-            self.send_command(f"go time {options.get("time")}")
+            self.send_command(f"go time {options.get('time')}")
 
     def set_settings(self, settings: dict):
         if self.state() == QtCore.QProcess.Running:

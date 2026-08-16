@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt, QPointF, QPropertyAnimation, QParallelAnimationGroup
 from PyQt5.QtGui import QBrush, QColor, QFont, QPen, QRadialGradient, QPainterPath
-from typing import Dict, Optional, List
+from typing import Dict, Optional
 
 from .models import BoardState, AnimationConfig
 from .pieces import PieceItem

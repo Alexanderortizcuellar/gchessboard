@@ -1,9 +1,8 @@
 import chess
 import chess.svg
 from PyQt5.QtSvg import QSvgRenderer, QGraphicsSvgItem
-from PyQt5.QtCore import QByteArray, Qt, QRectF
-from PyQt5.QtGui import QPainter
-from typing import Dict, Optional
+from PyQt5.QtCore import QByteArray
+from typing import Dict
 
 
 class RendererCache:
