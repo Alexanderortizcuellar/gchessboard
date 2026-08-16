@@ -1,10 +1,14 @@
 import sys
 import chess
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QVBoxLayout, QWidget,
-    QPushButton, QDialog,
+    QApplication,
+    QMainWindow,
+    QVBoxLayout,
+    QWidget,
+    QPushButton,
+    QDialog,
 )
-from src.board import PainterChessBoard
+from src.painter_board import PainterChessBoard
 from src.promotion import PromotionDialog
 
 
@@ -58,9 +62,7 @@ class MainWindow(QMainWindow):
         if piece and piece.piece_type == chess.PAWN:
             is_promotion = (
                 chess.square_rank(move.to_square) == 7 and piece.color == chess.WHITE
-            ) or (
-                chess.square_rank(move.to_square) == 0 and piece.color == chess.BLACK
-            )
+            ) or (chess.square_rank(move.to_square) == 0 and piece.color == chess.BLACK)
 
             if is_promotion:
                 if self.game.turn == piece.color:

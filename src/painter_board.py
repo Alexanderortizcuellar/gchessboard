@@ -29,9 +29,9 @@ application code.
 import os
 import math
 import chess
-from typing import Optional, Dict, List
+from typing import Optional, Dict
 
-from PyQt5.QtWidgets import QWidget, QApplication, QDialog
+from PyQt5.QtWidgets import QWidget
 from PyQt5.QtCore import (
     Qt,
     QRectF,
@@ -53,7 +53,7 @@ from PyQt5.QtGui import (
     QRadialGradient,
 )
 
-from .models import BoardState, BoardHighlight, BoardShape, AnimationConfig
+from .models import BoardState, BoardHighlight, BoardShape
 
 
 # ---------------------------------------------------------------------------
@@ -62,18 +62,18 @@ from .models import BoardState, BoardHighlight, BoardShape, AnimationConfig
 
 # Merida font character mapping (same as vector_chessboard.py / painter_chessboard.py)
 _PIECE_CHARS: Dict = {
-    (chess.PAWN,   chess.WHITE): 'p',
-    (chess.KNIGHT, chess.WHITE): 'n',
-    (chess.BISHOP, chess.WHITE): 'b',
-    (chess.ROOK,   chess.WHITE): 'r',
-    (chess.QUEEN,  chess.WHITE): 'q',
-    (chess.KING,   chess.WHITE): 'k',
-    (chess.PAWN,   chess.BLACK): 'o',
-    (chess.KNIGHT, chess.BLACK): 'm',
-    (chess.BISHOP, chess.BLACK): 'v',
-    (chess.ROOK,   chess.BLACK): 't',
-    (chess.QUEEN,  chess.BLACK): 'w',
-    (chess.KING,   chess.BLACK): 'l',
+    (chess.PAWN, chess.WHITE): "p",
+    (chess.KNIGHT, chess.WHITE): "n",
+    (chess.BISHOP, chess.WHITE): "b",
+    (chess.ROOK, chess.WHITE): "r",
+    (chess.QUEEN, chess.WHITE): "q",
+    (chess.KING, chess.WHITE): "k",
+    (chess.PAWN, chess.BLACK): "o",
+    (chess.KNIGHT, chess.BLACK): "m",
+    (chess.BISHOP, chess.BLACK): "v",
+    (chess.ROOK, chess.BLACK): "t",
+    (chess.QUEEN, chess.BLACK): "w",
+    (chess.KING, chess.BLACK): "l",
 }
 
 
@@ -93,7 +93,7 @@ def _make_glyph_path(char: str, font: QFont, sq_size: float) -> QPainterPath:
     raw = QPainterPath()
     raw.addText(0, 0, font, char)
     br = raw.boundingRect()
-    dx = sq_size / 2.0 - (br.x() + br.width()  / 2.0)
+    dx = sq_size / 2.0 - (br.x() + br.width() / 2.0)
     dy = sq_size / 2.0 - (br.y() + br.height() / 2.0)
     centered = QPainterPath()
     centered.addText(dx, dy, font, char)
@@ -130,9 +130,12 @@ def _build_pixmap_cache(font_family: str, sq_size: float) -> Dict:
             # Extract the largest sub-polygon (outer contour) and fill white
             polys = path.toSubpathPolygons()
             if polys:
-                outer = max(polys, key=lambda poly: (
-                    poly.boundingRect().width() * poly.boundingRect().height()
-                ))
+                outer = max(
+                    polys,
+                    key=lambda poly: (
+                        poly.boundingRect().width() * poly.boundingRect().height()
+                    ),
+                )
                 outer_path = QPainterPath()
                 outer_path.addPolygon(outer)
                 p.fillPath(outer_path, QBrush(QColor("#ffffff")))
@@ -151,9 +154,10 @@ def _build_pixmap_cache(font_family: str, sq_size: float) -> Dict:
 # Helper: parse color strings (same logic as scene.py)
 # ---------------------------------------------------------------------------
 
+
 def _parse_color(color_str: str) -> QColor:
     if color_str.startswith("rgba"):
-        content = color_str[color_str.find("(") + 1: color_str.find(")")]
+        content = color_str[color_str.find("(") + 1 : color_str.find(")")]
         parts = [p.strip() for p in content.split(",")]
         if len(parts) == 4:
             r, g, b = map(int, parts[:3])
@@ -165,6 +169,7 @@ def _parse_color(color_str: str) -> QColor:
 # ---------------------------------------------------------------------------
 # PainterChessBoard — the widget
 # ---------------------------------------------------------------------------
+
 
 class PainterChessBoard(QWidget):
     """
@@ -188,10 +193,10 @@ class PainterChessBoard(QWidget):
         selectionChanged(Optional[chess.Square])
     """
 
-    moveMade       = pyqtSignal(chess.Move)
-    pieceDropped   = pyqtSignal(chess.Move)
-    squareClicked  = pyqtSignal(chess.Square)
-    fenChanged     = pyqtSignal(str)
+    moveMade = pyqtSignal(chess.Move)
+    pieceDropped = pyqtSignal(chess.Move)
+    squareClicked = pyqtSignal(chess.Square)
+    fenChanged = pyqtSignal(str)
     selectionChanged = pyqtSignal(object)
 
     # Path to MERIFONT.TTF (relative to this file's directory)
@@ -274,12 +279,16 @@ class PainterChessBoard(QWidget):
                 for sq, col in value.items():
                     parsed_sq = chess.parse_square(sq) if isinstance(sq, str) else sq
                     if isinstance(col, str):
-                        self._state.custom_highlights[parsed_sq] = BoardHighlight(color=col, square=parsed_sq)
+                        self._state.custom_highlights[parsed_sq] = BoardHighlight(
+                            color=col, square=parsed_sq
+                        )
                     elif isinstance(col, BoardHighlight):
                         self._state.custom_highlights[parsed_sq] = col
                     elif isinstance(col, dict):
                         parsed_color = col.get("color", "rgba(255, 0, 0, 0.5)")
-                        self._state.custom_highlights[parsed_sq] = BoardHighlight(color=parsed_color, square=parsed_sq)
+                        self._state.custom_highlights[parsed_sq] = BoardHighlight(
+                            color=parsed_color, square=parsed_sq
+                        )
             elif key == "shapes" and isinstance(value, list):
                 parsed_shapes = []
                 for s in value:
@@ -394,7 +403,9 @@ class PainterChessBoard(QWidget):
     def _get_pixmap(self, piece: chess.Piece) -> Optional[QPixmap]:
         sq = int(self._square_size)
         if sq != self._cache_sq_size or not self._pixmap_cache:
-            self._pixmap_cache = _build_pixmap_cache(self._font_family, self._square_size)
+            self._pixmap_cache = _build_pixmap_cache(
+                self._font_family, self._square_size
+            )
             self._cache_sq_size = sq
         return self._pixmap_cache.get((piece.piece_type, piece.color))
 
@@ -496,8 +507,7 @@ class PainterChessBoard(QWidget):
             return
         board = chess.Board(self._state.fen)
         is_our_turn = (
-            self._state.movable.color is None
-            or board.turn == self._state.movable.color
+            self._state.movable.color is None or board.turn == self._state.movable.color
         )
         if self._state.premoves and is_our_turn:
             premove = self._state.premoves.pop(0)
@@ -547,6 +557,7 @@ class PainterChessBoard(QWidget):
         """Show promotion dialog. Falls back to QUEEN if dialog unavailable."""
         try:
             from .promotion import PromotionDialog
+
             result_holder = [chess.QUEEN]
             dialog = PromotionDialog(color, self)
             dialog.pieceSelected.connect(lambda t: result_holder.__setitem__(0, t))
@@ -596,9 +607,7 @@ class PainterChessBoard(QWidget):
         self._anim_progress = 0.0
         self.update()
 
-    def _try_start_move_animation(
-        self, old_board: chess.Board, new_board: chess.Board
-    ):
+    def _try_start_move_animation(self, old_board: chess.Board, new_board: chess.Board):
         """Detect the moved piece and start animation between old and new FEN."""
         disappeared, appeared = [], []
         for sq in chess.SQUARES:
@@ -613,7 +622,10 @@ class PainterChessBoard(QWidget):
         from_sq = to_sq = piece = None
         for d_sq, d_piece in disappeared:
             for a_sq, a_piece in appeared:
-                if d_piece.piece_type == a_piece.piece_type and d_piece.color == a_piece.color:
+                if (
+                    d_piece.piece_type == a_piece.piece_type
+                    and d_piece.color == a_piece.color
+                ):
                     from_sq, to_sq, piece = d_sq, a_sq, a_piece
                     break
             if from_sq is not None:
@@ -648,7 +660,7 @@ class PainterChessBoard(QWidget):
 
         theme = self._state.theme
         light_color = _parse_color(theme.get("light", "#dee3e6"))
-        dark_color  = _parse_color(theme.get("dark",  "#8ca2ad"))
+        dark_color = _parse_color(theme.get("dark", "#8ca2ad"))
 
         visual_board = self.get_visual_board()
         true_board = chess.Board(self._state.fen)
@@ -693,13 +705,16 @@ class PainterChessBoard(QWidget):
 
     def _draw_highlights(self, painter, sq, theme, true_board, visual_board):
         last_move_color = _parse_color(theme.get("lastMove", "rgba(255,255,0,0.5)"))
-        selected_color  = _parse_color(theme.get("selected",  "rgba(0,0,255,0.4)"))
-        premove_color   = _parse_color(theme.get("premove",   "rgba(20,100,200,0.5)"))
-        check_color     = _parse_color(theme.get("check",     "rgba(255,0,0,0.8)"))
+        selected_color = _parse_color(theme.get("selected", "rgba(0,0,255,0.4)"))
+        premove_color = _parse_color(theme.get("premove", "rgba(20,100,200,0.5)"))
+        check_color = _parse_color(theme.get("check", "rgba(255,0,0,0.8)"))
 
         # Last move
         if self._state.last_move:
-            for s in (self._state.last_move.from_square, self._state.last_move.to_square):
+            for s in (
+                self._state.last_move.from_square,
+                self._state.last_move.to_square,
+            ):
                 self._fill_square(painter, s, sq, last_move_color)
 
         # Selected square
@@ -709,7 +724,7 @@ class PainterChessBoard(QWidget):
         # Premove squares
         for pm in self._state.premoves:
             self._fill_square(painter, pm.from_square, sq, premove_color)
-            self._fill_square(painter, pm.to_square,   sq, premove_color)
+            self._fill_square(painter, pm.to_square, sq, premove_color)
 
         # Check highlight (radial gradient)
         if not self._state.editable and true_board.is_check():
@@ -720,18 +735,20 @@ class PainterChessBoard(QWidget):
                 cy = row * sq + sq / 2.0
                 grad = QRadialGradient(cx, cy, sq / 2.0)
                 c1 = QColor(check_color)
-                c2 = QColor(check_color); c2.setAlpha(c1.alpha() // 2)
-                c3 = QColor(check_color); c3.setAlpha(0)
+                c2 = QColor(check_color)
+                c2.setAlpha(c1.alpha() // 2)
+                c3 = QColor(check_color)
+                c3.setAlpha(0)
                 grad.setColorAt(0.0, c1)
                 grad.setColorAt(0.5, c2)
                 grad.setColorAt(1.0, c3)
-                painter.fillRect(
-                    QRectF(col * sq, row * sq, sq, sq), QBrush(grad)
-                )
+                painter.fillRect(QRectF(col * sq, row * sq, sq, sq), QBrush(grad))
 
         # Custom highlights
         for square, hl in self._state.custom_highlights.items():
-            self._fill_square(painter, square, sq, _parse_color(hl.color), z_adjust=-0.5)
+            self._fill_square(
+                painter, square, sq, _parse_color(hl.color), z_adjust=-0.5
+            )
 
         # Legal-move indicators
         if (
@@ -739,12 +756,9 @@ class PainterChessBoard(QWidget):
             and not self._state.view_only
             and not self._state.editable
         ):
-            is_premove = (
-                len(self._state.premoves) > 0
-                or (
-                    self._state.movable.color is not None
-                    and true_board.turn != self._state.movable.color
-                )
+            is_premove = len(self._state.premoves) > 0 or (
+                self._state.movable.color is not None
+                and true_board.turn != self._state.movable.color
             )
             if not (is_premove and not self._state.premovable.showDests):
                 if (
@@ -760,18 +774,14 @@ class PainterChessBoard(QWidget):
                         if m.from_square == self._state.selected
                     ]
 
-                dot_color = (
-                    premove_color if is_premove else QColor(0, 0, 0, 60)
-                )
+                dot_color = premove_color if is_premove else QColor(0, 0, 0, 60)
                 for dest in dests:
                     is_capture = visual_board.piece_at(dest) is not None
                     self._draw_legal_indicator(painter, dest, sq, is_capture, dot_color)
 
     def _fill_square(self, painter, square, sq_size, color, z_adjust=0):
         col, row = self._square_to_col_row(square)
-        painter.fillRect(
-            QRectF(col * sq_size, row * sq_size, sq_size, sq_size), color
-        )
+        painter.fillRect(QRectF(col * sq_size, row * sq_size, sq_size, sq_size), color)
 
     def _draw_legal_indicator(self, painter, square, sq_size, is_capture, color):
         col, row = self._square_to_col_row(square)
@@ -804,7 +814,9 @@ class PainterChessBoard(QWidget):
             painter.save()
             painter.setPen(QPen(Qt.NoPen))
             painter.setBrush(QBrush(color))
-            painter.drawEllipse(QRectF(cx - radius, cy - radius, radius * 2, radius * 2))
+            painter.drawEllipse(
+                QRectF(cx - radius, cy - radius, radius * 2, radius * 2)
+            )
             painter.restore()
 
     def _draw_shapes(self, painter, sq):
@@ -847,7 +859,7 @@ class PainterChessBoard(QWidget):
 
             elif shape.type == "arrow" and shape.dest is not None:
                 p1 = self._square_to_point(shape.orig) + QPointF(sq / 2, sq / 2)
-                p2 = self._square_to_point(shape.dest)  + QPointF(sq / 2, sq / 2)
+                p2 = self._square_to_point(shape.dest) + QPointF(sq / 2, sq / 2)
 
                 dx = p2.x() - p1.x()
                 dy = p2.y() - p1.y()
@@ -857,19 +869,19 @@ class PainterChessBoard(QWidget):
 
                 ux, uy = dx / length, dy / length
                 start_margin = sq * 0.3
-                end_margin   = sq * 0.35
+                end_margin = sq * 0.35
                 if length > (start_margin + end_margin):
                     start_pt = p1 + QPointF(ux * start_margin, uy * start_margin)
-                    end_pt   = p2 - QPointF(ux * end_margin,   uy * end_margin)
+                    end_pt = p2 - QPointF(ux * end_margin, uy * end_margin)
                 else:
                     start_pt = p1 + QPointF(ux * length * 0.1, uy * length * 0.1)
-                    end_pt   = p2 - QPointF(ux * length * 0.2, uy * length * 0.2)
+                    end_pt = p2 - QPointF(ux * length * 0.2, uy * length * 0.2)
 
                 arrow_size = max(12.0, shape.width * 3.0)
                 wing_w = arrow_size * 0.6
-                base_pt  = end_pt - QPointF(ux * arrow_size, uy * arrow_size)
-                wing_pt1 = base_pt + QPointF(-uy * wing_w,  ux * wing_w)
-                wing_pt2 = base_pt - QPointF(-uy * wing_w,  ux * wing_w)
+                base_pt = end_pt - QPointF(ux * arrow_size, uy * arrow_size)
+                wing_pt1 = base_pt + QPointF(-uy * wing_w, ux * wing_w)
+                wing_pt2 = base_pt - QPointF(-uy * wing_w, ux * wing_w)
 
                 path = QPainterPath()
                 path.moveTo(start_pt)
@@ -900,10 +912,14 @@ class PainterChessBoard(QWidget):
                     painter.drawPixmap(int(col * sq), int(row * sq), pixmap)
 
     def _draw_animated_piece(self, painter, sq):
-        if self._anim_piece is None or self._anim_from_sq is None or self._anim_to_sq is None:
+        if (
+            self._anim_piece is None
+            or self._anim_from_sq is None
+            or self._anim_to_sq is None
+        ):
             return
         p_from = self._square_to_point(self._anim_from_sq)
-        p_to   = self._square_to_point(self._anim_to_sq)
+        p_to = self._square_to_point(self._anim_to_sq)
         t = self._anim_progress
         cx = p_from.x() + (p_to.x() - p_from.x()) * t
         cy = p_from.y() + (p_to.y() - p_from.y()) * t
@@ -1021,7 +1037,9 @@ class PainterChessBoard(QWidget):
                     self._state.movable.color is None
                     or true_board.turn == self._state.movable.color
                 )
-                can_select = (square is not None) and self._can_move_piece(square, visual_board)
+                can_select = (square is not None) and self._can_move_piece(
+                    square, visual_board
+                )
 
                 if self._click_origin is not None:
                     if square == self._click_origin:
@@ -1032,7 +1050,9 @@ class PainterChessBoard(QWidget):
                     else:
                         # Attempt move
                         if square is not None:
-                            move = self._create_move(self._click_origin, square, visual_board)
+                            move = self._create_move(
+                                self._click_origin, square, visual_board
+                            )
                             if is_our_turn and not self._state.premoves:
                                 if self._is_move_valid(move, visual_board):
                                     self.moveMade.emit(move)
@@ -1090,7 +1110,10 @@ class PainterChessBoard(QWidget):
             current_sq = self._point_to_square(pos)
             if current_sq != self._current_draw_target_square:
                 self._current_draw_target_square = current_sq
-                if current_sq is not None and self._right_click_start_square is not None:
+                if (
+                    current_sq is not None
+                    and self._right_click_start_square is not None
+                ):
                     if current_sq == self._right_click_start_square:
                         self._state.preview_shape = BoardShape(
                             type="circle",
@@ -1120,22 +1143,26 @@ class PainterChessBoard(QWidget):
             if self._right_click_start_square is not None and end_square is not None:
                 if self._right_click_start_square == end_square:
                     existing = [
-                        s for s in self._state.shapes
+                        s
+                        for s in self._state.shapes
                         if s.type == "circle" and s.orig == end_square
                     ]
                     if existing:
                         for s in existing:
                             self._state.shapes.remove(s)
                     else:
-                        self._state.shapes.append(BoardShape(
-                            type="circle",
-                            orig=end_square,
-                            color="rgba(21, 128, 61, 0.6)",
-                            width=4.0,
-                        ))
+                        self._state.shapes.append(
+                            BoardShape(
+                                type="circle",
+                                orig=end_square,
+                                color="rgba(21, 128, 61, 0.6)",
+                                width=4.0,
+                            )
+                        )
                 else:
                     existing = [
-                        s for s in self._state.shapes
+                        s
+                        for s in self._state.shapes
                         if s.type == "arrow"
                         and s.orig == self._right_click_start_square
                         and s.dest == end_square
@@ -1144,13 +1171,15 @@ class PainterChessBoard(QWidget):
                         for s in existing:
                             self._state.shapes.remove(s)
                     else:
-                        self._state.shapes.append(BoardShape(
-                            type="arrow",
-                            orig=self._right_click_start_square,
-                            dest=end_square,
-                            color="rgba(21, 128, 61, 0.6)",
-                            width=4.0,
-                        ))
+                        self._state.shapes.append(
+                            BoardShape(
+                                type="arrow",
+                                orig=self._right_click_start_square,
+                                dest=end_square,
+                                color="rgba(21, 128, 61, 0.6)",
+                                width=4.0,
+                            )
+                        )
 
             self._right_click_start_square = None
             self._current_draw_target_square = None

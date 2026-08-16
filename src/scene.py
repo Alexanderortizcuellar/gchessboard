@@ -302,7 +302,10 @@ class BoardScene(QGraphicsScene):
                 margin = square_size * 0.2
                 path = QPainterPath()
                 path.moveTo(orig_pos.x() + margin, orig_pos.y() + margin)
-                path.lineTo(orig_pos.x() + square_size - margin, orig_pos.y() + square_size - margin)
+                path.lineTo(
+                    orig_pos.x() + square_size - margin,
+                    orig_pos.y() + square_size - margin,
+                )
                 path.moveTo(orig_pos.x() + square_size - margin, orig_pos.y() + margin)
                 path.lineTo(orig_pos.x() + margin, orig_pos.y() + square_size - margin)
 
@@ -316,58 +319,62 @@ class BoardScene(QGraphicsScene):
                 self.shape_items.append(cross_item)
 
             elif shape.type == "arrow" and shape.dest is not None:
-                p1 = self.get_square_pos(shape.orig, square_size, orientation) + QPointF(square_size / 2, square_size / 2)
-                p2 = self.get_square_pos(shape.dest, square_size, orientation) + QPointF(square_size / 2, square_size / 2)
-                
+                p1 = self.get_square_pos(
+                    shape.orig, square_size, orientation
+                ) + QPointF(square_size / 2, square_size / 2)
+                p2 = self.get_square_pos(
+                    shape.dest, square_size, orientation
+                ) + QPointF(square_size / 2, square_size / 2)
+
                 dx = p2.x() - p1.x()
                 dy = p2.y() - p1.y()
                 length = (dx**2 + dy**2) ** 0.5
                 if length == 0:
                     continue
-                
+
                 ux = dx / length
                 uy = dy / length
-                
+
                 start_margin = square_size * 0.3
                 end_margin = square_size * 0.35
-                
+
                 if length > (start_margin + end_margin):
                     start_pt = p1 + QPointF(ux * start_margin, uy * start_margin)
                     end_pt = p2 - QPointF(ux * end_margin, uy * end_margin)
                 else:
                     start_pt = p1 + QPointF(ux * length * 0.1, uy * length * 0.1)
                     end_pt = p2 - QPointF(ux * length * 0.2, uy * length * 0.2)
-                
+
                 seg_dx = end_pt.x() - start_pt.x()
                 seg_dy = end_pt.y() - start_pt.y()
                 seg_len = (seg_dx**2 + seg_dy**2) ** 0.5
                 if seg_len == 0:
                     continue
-                
+
                 arrow_size = max(12.0, shape.width * 3.0)
                 wing_width = arrow_size * 0.6
-                
+
                 base_pt = end_pt - QPointF(ux * arrow_size, uy * arrow_size)
                 wing_pt1 = base_pt + QPointF(-uy * wing_width, ux * wing_width)
                 wing_pt2 = base_pt - QPointF(-uy * wing_width, ux * wing_width)
-                
+
                 path = QPainterPath()
                 path.moveTo(start_pt)
                 path.lineTo(base_pt)
-                
+
                 path.moveTo(wing_pt1)
                 path.lineTo(end_pt)
                 path.lineTo(wing_pt2)
                 path.closeSubpath()
-                
+
                 arrow_item = QGraphicsPathItem(path)
                 color = parse_color(shape.color)
-                
+
                 pen = QPen(color)
                 pen.setWidthF(shape.width)
                 pen.setCapStyle(Qt.RoundCap)
                 pen.setJoinStyle(Qt.RoundJoin)
-                
+
                 arrow_item.setPen(pen)
                 arrow_item.setBrush(QBrush(color))
                 arrow_item.setZValue(0.5)

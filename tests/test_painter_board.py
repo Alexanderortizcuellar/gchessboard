@@ -24,6 +24,7 @@ Covers:
   20. Verify existing main tests not broken (import sanity check)
 """
 
+import sys
 import chess
 import pytest
 
@@ -32,7 +33,7 @@ from PyQt5.QtCore import QPointF, Qt
 
 from src.painter_board import PainterChessBoard
 from src.board import BoardView
-from src.models import BoardState, BoardShape, BoardHighlight
+from src.models import BoardState
 
 
 @pytest.fixture(scope="session")
@@ -56,6 +57,7 @@ def board(app):
 # 1. Starting position
 # ---------------------------------------------------------------------------
 
+
 def test_starting_position(board):
     cb = chess.Board(board._state.fen)
     assert cb == chess.Board()
@@ -65,6 +67,7 @@ def test_starting_position(board):
 # ---------------------------------------------------------------------------
 # 2. Empty board
 # ---------------------------------------------------------------------------
+
 
 def test_empty_board(board):
     empty_fen = "8/8/8/8/8/8/8/8 w - - 0 1"
@@ -77,6 +80,7 @@ def test_empty_board(board):
 # 3. Arbitrary FEN
 # ---------------------------------------------------------------------------
 
+
 def test_arbitrary_fen(board):
     fen = "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2"
     board.set(fen=fen)
@@ -86,6 +90,7 @@ def test_arbitrary_fen(board):
 # ---------------------------------------------------------------------------
 # 4. Board flipping
 # ---------------------------------------------------------------------------
+
 
 def test_flip_orientation(board):
     assert board._state.orientation == chess.WHITE
@@ -106,6 +111,7 @@ def test_flip_and_square_mapping(board):
 # 5. Piece movement (programmatic)
 # ---------------------------------------------------------------------------
 
+
 def test_move_piece(board):
     move = chess.Move.from_uci("e2e4")
     board.move_piece(move)
@@ -124,6 +130,7 @@ def test_move_piece_illegal_ignored(board):
 # 6. Captures
 # ---------------------------------------------------------------------------
 
+
 def test_capture(board):
     # Scholar's mate capture: 1.e4 e5 2.Qh5 Nc6 3.Bc4 Nf6?? 4.Qxf7#
     moves = ["e2e4", "e7e5", "d1h5", "b8c6", "f1c4", "g8f6", "h5f7"]
@@ -133,12 +140,15 @@ def test_capture(board):
         cb.push(m)
     board.set(fen=cb.fen())
     # f7 should now have a white queen
-    assert chess.Board(board._state.fen).piece_at(chess.F7) == chess.Piece(chess.QUEEN, chess.WHITE)
+    assert chess.Board(board._state.fen).piece_at(chess.F7) == chess.Piece(
+        chess.QUEEN, chess.WHITE
+    )
 
 
 # ---------------------------------------------------------------------------
 # 7. Promotion (auto-queen via _create_move)
 # ---------------------------------------------------------------------------
+
 
 def test_promotion_auto_queen(board):
     # Put a white pawn on e7
@@ -155,6 +165,7 @@ def test_promotion_auto_queen(board):
 # 8. Drag simulation
 # ---------------------------------------------------------------------------
 
+
 def test_drag_simulation(board):
     board._state.movable.color = chess.WHITE
     sq = board._square_size
@@ -165,7 +176,13 @@ def test_drag_simulation(board):
 
     from PyQt5.QtTest import QTest
     from PyQt5.QtCore import QPoint
-    QTest.mousePress(board, Qt.LeftButton, Qt.NoModifier, QPoint(int(press_pos.x()), int(press_pos.y())))
+
+    QTest.mousePress(
+        board,
+        Qt.LeftButton,
+        Qt.NoModifier,
+        QPoint(int(press_pos.x()), int(press_pos.y())),
+    )
     QApplication.processEvents()
 
     assert board._drag_square == chess.E2
@@ -179,7 +196,12 @@ def test_drag_simulation(board):
     # Release
     moves_made = []
     board.moveMade.connect(lambda m: moves_made.append(m))
-    QTest.mouseRelease(board, Qt.LeftButton, Qt.NoModifier, QPoint(int(move_pos.x()), int(move_pos.y())))
+    QTest.mouseRelease(
+        board,
+        Qt.LeftButton,
+        Qt.NoModifier,
+        QPoint(int(move_pos.x()), int(move_pos.y())),
+    )
     QApplication.processEvents()
 
     assert len(moves_made) == 1
@@ -190,6 +212,7 @@ def test_drag_simulation(board):
 # ---------------------------------------------------------------------------
 # 9. Click-to-move simulation
 # ---------------------------------------------------------------------------
+
 
 def test_click_to_move(board):
     board._state.movable.color = chess.WHITE
@@ -218,6 +241,7 @@ def test_click_to_move(board):
 # 10. Animation state
 # ---------------------------------------------------------------------------
 
+
 def test_animation_disabled(board):
     board.set(animation={"enabled": False})
     assert board._state.animation.enabled is False
@@ -239,6 +263,7 @@ def test_animation_enabled(board):
 # 11. Highlights
 # ---------------------------------------------------------------------------
 
+
 def test_last_move_highlight(board):
     move = chess.Move.from_uci("e2e4")
     board.set(lastMove=move)
@@ -259,6 +284,7 @@ def test_custom_highlights(board):
 # 12. Check detection
 # ---------------------------------------------------------------------------
 
+
 def test_check_highlight_in_state(board):
     # Set a position where white is in check
     check_fen = "rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3"
@@ -274,14 +300,34 @@ def test_check_highlight_in_state(board):
 # 13. Arrows and circles
 # ---------------------------------------------------------------------------
 
+
 def test_arrow_shape(board):
-    board.set(shapes=[{"type": "arrow", "orig": "e2", "dest": "e4", "color": "rgba(21,128,61,0.6)", "width": 4.0}])
+    board.set(
+        shapes=[
+            {
+                "type": "arrow",
+                "orig": "e2",
+                "dest": "e4",
+                "color": "rgba(21,128,61,0.6)",
+                "width": 4.0,
+            }
+        ]
+    )
     assert len(board._state.shapes) == 1
     assert board._state.shapes[0].type == "arrow"
 
 
 def test_circle_shape(board):
-    board.set(shapes=[{"type": "circle", "orig": "e4", "color": "rgba(21,128,61,0.6)", "width": 4.0}])
+    board.set(
+        shapes=[
+            {
+                "type": "circle",
+                "orig": "e4",
+                "color": "rgba(21,128,61,0.6)",
+                "width": 4.0,
+            }
+        ]
+    )
     assert len(board._state.shapes) == 1
     assert board._state.shapes[0].type == "circle"
 
@@ -302,13 +348,16 @@ def test_right_click_draws_circle(board):
     QTest.mouseRelease(board, Qt.RightButton, Qt.NoModifier, p)
     QApplication.processEvents()
 
-    circles = [s for s in board._state.shapes if s.type == "circle" and s.orig == chess.E4]
+    circles = [
+        s for s in board._state.shapes if s.type == "circle" and s.orig == chess.E4
+    ]
     assert len(circles) == 1
 
 
 # ---------------------------------------------------------------------------
 # 14. Premoves
 # ---------------------------------------------------------------------------
+
 
 def test_premove_queued(board):
     """While it's white's turn, premoves queue when movable.color=BLACK."""
@@ -317,7 +366,6 @@ def test_premove_queued(board):
         premovable={"enabled": True},
     )
     # Board is on white's turn → black can queue premove
-    visual = board.get_visual_board()
     board._state.premoves.append(chess.Move.from_uci("e7e5"))
     assert len(board._state.premoves) == 1
 
@@ -333,6 +381,7 @@ def test_premove_highlight(board):
 # ---------------------------------------------------------------------------
 # 15. Resizing
 # ---------------------------------------------------------------------------
+
 
 def test_resize_invalidates_cache(board):
     board.resize(320, 320)
@@ -360,6 +409,7 @@ def test_resize_multiple_times(board):
 # 16. Rapid repeated moves
 # ---------------------------------------------------------------------------
 
+
 def test_rapid_moves(board):
     cb = chess.Board()
     moves = list(cb.legal_moves)[:10]
@@ -375,6 +425,7 @@ def test_rapid_moves(board):
 # 17. Switching positions while animation is active
 # ---------------------------------------------------------------------------
 
+
 def test_switch_fen_during_animation(board):
     board.set(animation={"enabled": True, "duration": 500})
     board.move_piece(chess.Move.from_uci("e2e4"))  # starts animation
@@ -388,6 +439,7 @@ def test_switch_fen_during_animation(board):
 # ---------------------------------------------------------------------------
 # 18. Signals
 # ---------------------------------------------------------------------------
+
 
 def test_signals_emitted(board):
     fen_signals = []
@@ -408,6 +460,7 @@ def test_squareclicked_signal(board):
 
     from PyQt5.QtTest import QTest
     from PyQt5.QtCore import QPoint
+
     sq = board._square_size
     col, row = board._square_to_col_row(chess.E2)
     p = QPoint(int(col * sq + sq / 2), int(row * sq + sq / 2))
@@ -423,6 +476,7 @@ def test_selection_changed_signal(board):
 
     from PyQt5.QtTest import QTest
     from PyQt5.QtCore import QPoint
+
     sq = board._square_size
     col, row = board._square_to_col_row(chess.E2)
     p = QPoint(int(col * sq + sq / 2), int(row * sq + sq / 2))
@@ -435,6 +489,7 @@ def test_selection_changed_signal(board):
 # ---------------------------------------------------------------------------
 # 19. API parity
 # ---------------------------------------------------------------------------
+
 
 def test_set_fen_api(board):
     board.set_fen("8/8/8/8/8/8/8/8 w - - 0 1")
@@ -494,6 +549,7 @@ def test_editable_mode(board):
 # 20. Paintability — no crash on extreme states
 # ---------------------------------------------------------------------------
 
+
 def test_paint_empty_board(board):
     board.set(fen="8/8/8/8/8/8/8/8 w - - 0 1")
     board.repaint()
@@ -505,8 +561,19 @@ def test_paint_with_shapes_and_highlights(board):
         lastMove=chess.Move.from_uci("e2e4"),
         selected=chess.E4,
         shapes=[
-            {"type": "arrow", "orig": "e2", "dest": "e4", "color": "rgba(21,128,61,0.6)", "width": 4.0},
-            {"type": "circle", "orig": "d4", "color": "rgba(200,0,0,0.5)", "width": 3.0},
+            {
+                "type": "arrow",
+                "orig": "e2",
+                "dest": "e4",
+                "color": "rgba(21,128,61,0.6)",
+                "width": 4.0,
+            },
+            {
+                "type": "circle",
+                "orig": "d4",
+                "color": "rgba(200,0,0,0.5)",
+                "width": 3.0,
+            },
         ],
         customHighlights={chess.A1: "rgba(255, 255, 0, 0.5)"},
     )
@@ -517,6 +584,7 @@ def test_paint_with_shapes_and_highlights(board):
 # ---------------------------------------------------------------------------
 # Sanity: existing BoardView still importable and functional
 # ---------------------------------------------------------------------------
+
 
 def test_existing_board_view_still_works(app):
     bv = BoardView()

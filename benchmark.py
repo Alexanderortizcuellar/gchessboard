@@ -21,9 +21,8 @@ import tracemalloc
 import gc
 
 import chess
-from PyQt5.QtWidgets import QApplication, QWidget
-from PyQt5.QtCore import Qt, QTimer, QElapsedTimer
-from PyQt5.QtGui import QPainter
+from PyQt5.QtWidgets import QApplication
+from PyQt5.QtCore import QElapsedTimer
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -32,9 +31,9 @@ from src.board import BoardView, PainterChessBoard
 # ---------------------------------------------------------------------------
 # Settings
 # ---------------------------------------------------------------------------
-N_REPAINTS      = 200      # how many forced repaints to measure
-BOARD_SIZE_PX   = 480      # widget size in pixels
-MOVE_SEQUENCE   = [        # moves for animation benchmark
+N_REPAINTS = 200  # how many forced repaints to measure
+BOARD_SIZE_PX = 480  # widget size in pixels
+MOVE_SEQUENCE = [  # moves for animation benchmark
     chess.Move.from_uci("e2e4"),
     chess.Move.from_uci("e7e5"),
     chess.Move.from_uci("g1f3"),
@@ -49,6 +48,7 @@ MOVE_SEQUENCE   = [        # moves for animation benchmark
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def mem_kb(snapshot) -> float:
     stats = snapshot.statistics("lineno")
@@ -141,6 +141,7 @@ def fmt(results: dict) -> str:
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main():
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
@@ -153,25 +154,29 @@ def main():
 
     # Painter board
     painter_board = PainterChessBoard()
-    painter_res = benchmark_board(painter_board, "PainterChessBoard (QWidget + QPainter + Font)", app)
+    painter_res = benchmark_board(
+        painter_board, "PainterChessBoard (QWidget + QPainter + Font)", app
+    )
 
-    output = "\n".join([
-        "=" * 60,
-        "  GChessboard Benchmark Results",
-        "=" * 60,
-        "",
-        fmt(svg_res),
-        "",
-        fmt(painter_res),
-        "",
-        "=" * 60,
-        "  Comparison (Painter vs SVG)",
-        "=" * 60,
-        f"  Repaint speedup      : {svg_res['avg_repaint_ms'] / max(painter_res['avg_repaint_ms'], 0.001):.2f}×",
-        f"  FPS improvement      : +{painter_res['est_fps_idle'] - svg_res['est_fps_idle']:.1f} FPS",
-        f"  Memory reduction     : {svg_res['mem_with_board_kb'] - painter_res['mem_with_board_kb']:.1f} KB",
-        "=" * 60,
-    ])
+    output = "\n".join(
+        [
+            "=" * 60,
+            "  GChessboard Benchmark Results",
+            "=" * 60,
+            "",
+            fmt(svg_res),
+            "",
+            fmt(painter_res),
+            "",
+            "=" * 60,
+            "  Comparison (Painter vs SVG)",
+            "=" * 60,
+            f"  Repaint speedup      : {svg_res['avg_repaint_ms'] / max(painter_res['avg_repaint_ms'], 0.001):.2f}×",
+            f"  FPS improvement      : +{painter_res['est_fps_idle'] - svg_res['est_fps_idle']:.1f} FPS",
+            f"  Memory reduction     : {svg_res['mem_with_board_kb'] - painter_res['mem_with_board_kb']:.1f} KB",
+            "=" * 60,
+        ]
+    )
 
     print(output)
 

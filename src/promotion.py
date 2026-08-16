@@ -47,7 +47,7 @@ class PromotionDialog(QDialog):
             (chess.KNIGHT, "n"),
         ]
 
-        #color_str = "w" if color == chess.WHITE else "b"
+        # color_str = "w" if color == chess.WHITE else "b"
 
         for p_type, char in promotion_types:
             btn = QPushButton()

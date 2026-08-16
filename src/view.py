@@ -154,12 +154,16 @@ class BoardView(QGraphicsView):
                 for sq, col in value.items():
                     parsed_sq = chess.parse_square(sq) if isinstance(sq, str) else sq
                     if isinstance(col, str):
-                        self._state.custom_highlights[parsed_sq] = BoardHighlight(color=col, square=parsed_sq)
+                        self._state.custom_highlights[parsed_sq] = BoardHighlight(
+                            color=col, square=parsed_sq
+                        )
                     elif isinstance(col, BoardHighlight):
                         self._state.custom_highlights[parsed_sq] = col
                     elif isinstance(col, dict):
                         parsed_color = col.get("color", "rgba(255, 0, 0, 0.5)")
-                        self._state.custom_highlights[parsed_sq] = BoardHighlight(color=parsed_color, square=parsed_sq)
+                        self._state.custom_highlights[parsed_sq] = BoardHighlight(
+                            color=parsed_color, square=parsed_sq
+                        )
             elif key == "shapes" and isinstance(value, list):
                 parsed_shapes = []
                 for s in value:
@@ -313,7 +317,7 @@ class BoardView(QGraphicsView):
                         type="circle",
                         orig=square,
                         color="rgba(21, 128, 61, 0.6)",
-                        width=4.0
+                        width=4.0,
                     )
                     self.update_board()
                 event.accept()
@@ -414,13 +418,16 @@ class BoardView(QGraphicsView):
             current_square = self.get_square_at(event.pos())
             if current_square != getattr(self, "_current_draw_target_square", None):
                 self._current_draw_target_square = current_square
-                if current_square is not None and self._right_click_start_square is not None:
+                if (
+                    current_square is not None
+                    and self._right_click_start_square is not None
+                ):
                     if current_square == self._right_click_start_square:
                         self._state.preview_shape = BoardShape(
                             type="circle",
                             orig=self._right_click_start_square,
                             color="rgba(21, 128, 61, 0.6)",
-                            width=4.0
+                            width=4.0,
                         )
                     else:
                         self._state.preview_shape = BoardShape(
@@ -428,7 +435,7 @@ class BoardView(QGraphicsView):
                             orig=self._right_click_start_square,
                             dest=current_square,
                             color="rgba(21, 128, 61, 0.6)",
-                            width=4.0
+                            width=4.0,
                         )
                 else:
                     self._state.preview_shape = None
@@ -437,38 +444,54 @@ class BoardView(QGraphicsView):
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
-        if event.button() == Qt.RightButton and getattr(self, "_is_drawing_shape", False):
+        if event.button() == Qt.RightButton and getattr(
+            self, "_is_drawing_shape", False
+        ):
             self._is_drawing_shape = False
             self._state.preview_shape = None
-            
+
             end_square = self.get_square_at(event.pos())
             if self._right_click_start_square is not None and end_square is not None:
                 if self._right_click_start_square == end_square:
-                    existing = [s for s in self._state.shapes if s.type == "circle" and s.orig == end_square]
+                    existing = [
+                        s
+                        for s in self._state.shapes
+                        if s.type == "circle" and s.orig == end_square
+                    ]
                     if existing:
                         for s in existing:
                             self._state.shapes.remove(s)
                     else:
-                        self._state.shapes.append(BoardShape(
-                            type="circle",
-                            orig=end_square,
-                            color="rgba(21, 128, 61, 0.6)",
-                            width=4.0
-                        ))
+                        self._state.shapes.append(
+                            BoardShape(
+                                type="circle",
+                                orig=end_square,
+                                color="rgba(21, 128, 61, 0.6)",
+                                width=4.0,
+                            )
+                        )
                 else:
-                    existing = [s for s in self._state.shapes if s.type == "arrow" and s.orig == self._right_click_start_square and s.dest == end_square]
+                    existing = [
+                        s
+                        for s in self._state.shapes
+                        if s.type == "arrow"
+                        and s.orig == self._right_click_start_square
+                        and s.dest == end_square
+                    ]
                     if existing:
                         for s in existing:
                             self._state.shapes.remove(s)
                     else:
-                        self._state.shapes.append(BoardShape(
-                            type="arrow",
-                            orig=self._right_click_start_square,
-                            dest=end_square,
-                            color="rgba(21, 128, 61, 0.6)",
-                            width=4.0
-                        ))
-            
+                        self._state.shapes.append(
+                            BoardShape(
+                                type="arrow",
+                                orig=self._right_click_start_square,
+                                dest=end_square,
+                                color="rgba(21, 128, 61, 0.6)",
+                                width=4.0,
+                            )
+                        )
+
             self._right_click_start_square = None
             self._current_draw_target_square = None
             self.update_board()

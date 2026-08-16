@@ -14,17 +14,23 @@ import sys
 import chess
 
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QHBoxLayout,
-    QVBoxLayout, QPushButton, QLabel, QSplitter,
+    QApplication,
+    QMainWindow,
+    QWidget,
+    QHBoxLayout,
+    QVBoxLayout,
+    QPushButton,
+    QLabel,
+    QSplitter,
 )
 from PyQt5.QtCore import Qt
 
 # Make sure the src package is on the path
 import os
+
 sys.path.insert(0, os.path.dirname(__file__))
 
 from src.board import BoardView, PainterChessBoard
-from src.models import BoardState
 
 
 class DemoWindow(QMainWindow):
@@ -102,9 +108,12 @@ class DemoWindow(QMainWindow):
         fen_row = QHBoxLayout()
         fen_examples = [
             ("Starting", chess.STARTING_FEN),
-            ("Sicilian", "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2"),
-            ("Endgame",  "8/5k2/3p4/1p1Pp2p/pP2Pp1P/P4P1K/8/8 b - - 99 50"),
-            ("Check",    "rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3"),
+            (
+                "Sicilian",
+                "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2",
+            ),
+            ("Endgame", "8/5k2/3p4/1p1Pp2p/pP2Pp1P/P4P1K/8/8 b - - 99 50"),
+            ("Check", "rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3"),
         ]
         for name, fen in fen_examples:
             btn = QPushButton(name)

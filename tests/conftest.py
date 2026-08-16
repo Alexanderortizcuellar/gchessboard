@@ -4,6 +4,7 @@ conftest.py — pytest configuration for the tests/ folder.
 Adds the project root to sys.path so that `from src.xxx import ...`
 works correctly when pytest is run from either the root or the tests/ dir.
 """
+
 import sys
 import os
 

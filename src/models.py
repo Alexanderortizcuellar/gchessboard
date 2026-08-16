@@ -28,6 +28,7 @@ class BoardHighlight:
     color: str  # rgba or hex string
     square: chess.Square
 
+
 @dataclass
 class BoardShape:
     type: str  # "arrow", "circle", or "cross"
@@ -35,6 +36,7 @@ class BoardShape:
     dest: Optional[chess.Square] = None  # None for circles/crosses
     color: str = "rgba(255, 0, 0, 0.5)"
     width: float = 4.0
+
 
 @dataclass
 class BoardState:
