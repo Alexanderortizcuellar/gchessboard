@@ -833,10 +833,16 @@ class PainterChessBoard(QWidget):
 
             if shape.type == "circle":
                 col, row = self._square_to_col_row(shape.orig)
-                diameter = sq * 0.8
+                width_factor = shape.width / 4.0
+                stroke_width = max(3.0, sq * 0.08 * width_factor)
+                diameter = sq * 0.88
                 margin = (sq - diameter) / 2
+                circle_pen = QPen(color)
+                circle_pen.setWidthF(stroke_width)
+                circle_pen.setCapStyle(Qt.RoundCap)
+                circle_pen.setJoinStyle(Qt.RoundJoin)
                 painter.save()
-                painter.setPen(pen)
+                painter.setPen(circle_pen)
                 painter.setBrush(QBrush(Qt.transparent))
                 painter.drawEllipse(
                     QRectF(col * sq + margin, row * sq + margin, diameter, diameter)
@@ -845,15 +851,21 @@ class PainterChessBoard(QWidget):
 
             elif shape.type == "cross":
                 col, row = self._square_to_col_row(shape.orig)
-                m = sq * 0.2
+                width_factor = shape.width / 4.0
+                stroke_width = max(3.0, sq * 0.08 * width_factor)
+                m = sq * 0.18
                 x0, y0 = col * sq, row * sq
                 path = QPainterPath()
                 path.moveTo(x0 + m, y0 + m)
                 path.lineTo(x0 + sq - m, y0 + sq - m)
                 path.moveTo(x0 + sq - m, y0 + m)
                 path.lineTo(x0 + m, y0 + sq - m)
+                cross_pen = QPen(color)
+                cross_pen.setWidthF(stroke_width)
+                cross_pen.setCapStyle(Qt.RoundCap)
+                cross_pen.setJoinStyle(Qt.RoundJoin)
                 painter.save()
-                painter.setPen(pen)
+                painter.setPen(cross_pen)
                 painter.drawPath(path)
                 painter.restore()
 
@@ -868,31 +880,75 @@ class PainterChessBoard(QWidget):
                     continue
 
                 ux, uy = dx / length, dy / length
-                start_margin = sq * 0.3
-                end_margin = sq * 0.35
-                if length > (start_margin + end_margin):
+                nx, ny = -uy, ux
+
+                width_factor = shape.width / 4.0
+                shaft_width = max(3.0, sq * 0.16 * width_factor)
+                head_len = max(10.0, sq * 0.38 * width_factor)
+                wing_w = max(6.0, sq * 0.30 * width_factor)
+                half_w = shaft_width / 2.0
+
+                start_margin = sq * 0.18
+                end_margin = sq * 0.18
+
+                if length > (start_margin + end_margin + head_len):
                     start_pt = p1 + QPointF(ux * start_margin, uy * start_margin)
                     end_pt = p2 - QPointF(ux * end_margin, uy * end_margin)
                 else:
-                    start_pt = p1 + QPointF(ux * length * 0.1, uy * length * 0.1)
-                    end_pt = p2 - QPointF(ux * length * 0.2, uy * length * 0.2)
+                    start_pt = p1 + QPointF(
+                        ux * min(start_margin, length * 0.15),
+                        uy * min(start_margin, length * 0.15),
+                    )
+                    end_pt = p2 - QPointF(
+                        ux * min(end_margin, length * 0.15),
+                        uy * min(end_margin, length * 0.15),
+                    )
+                    actual_len = math.hypot(
+                        end_pt.x() - start_pt.x(), end_pt.y() - start_pt.y()
+                    )
+                    if actual_len <= 0:
+                        continue
+                    head_len = min(head_len, actual_len * 0.6)
+                    wing_w = head_len * (0.30 / 0.38)
+                    shaft_width = min(shaft_width, head_len * (0.16 / 0.38))
+                    half_w = shaft_width / 2.0
 
-                arrow_size = max(12.0, shape.width * 3.0)
-                wing_w = arrow_size * 0.6
-                base_pt = end_pt - QPointF(ux * arrow_size, uy * arrow_size)
-                wing_pt1 = base_pt + QPointF(-uy * wing_w, ux * wing_w)
-                wing_pt2 = base_pt - QPointF(-uy * wing_w, ux * wing_w)
+                base_pt = end_pt - QPointF(ux * head_len, uy * head_len)
+
+                p_tl = start_pt + QPointF(nx * half_w, ny * half_w)
+                p_tr = start_pt - QPointF(nx * half_w, ny * half_w)
+                p_hl = base_pt + QPointF(nx * half_w, ny * half_w)
+                p_hr = base_pt - QPointF(nx * half_w, ny * half_w)
+                p_wl = base_pt + QPointF(nx * wing_w, ny * wing_w)
+                p_wr = base_pt - QPointF(nx * wing_w, ny * wing_w)
+
+                back_ux, back_uy = -ux, -uy
+                tail_tip = start_pt + QPointF(back_ux * half_w, back_uy * half_w)
+                k = 0.5522847498 * half_w
 
                 path = QPainterPath()
-                path.moveTo(start_pt)
-                path.lineTo(base_pt)
-                path.moveTo(wing_pt1)
+                path.moveTo(p_tl)
+                path.lineTo(p_hl)
+                path.lineTo(p_wl)
                 path.lineTo(end_pt)
-                path.lineTo(wing_pt2)
+                path.lineTo(p_wr)
+                path.lineTo(p_hr)
+                path.lineTo(p_tr)
+
+                path.cubicTo(
+                    p_tr + QPointF(back_ux * k, back_uy * k),
+                    tail_tip - QPointF(nx * k, ny * k),
+                    tail_tip,
+                )
+                path.cubicTo(
+                    tail_tip + QPointF(nx * k, ny * k),
+                    p_tl + QPointF(back_ux * k, back_uy * k),
+                    p_tl,
+                )
                 path.closeSubpath()
 
                 painter.save()
-                painter.setPen(pen)
+                painter.setPen(Qt.NoPen)
                 painter.setBrush(QBrush(color))
                 painter.drawPath(path)
                 painter.restore()

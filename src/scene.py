@@ -285,13 +285,17 @@ class BoardScene(QGraphicsScene):
         for shape in shapes:
             if shape.type == "circle":
                 orig_pos = self.get_square_pos(shape.orig, square_size, orientation)
-                diameter = square_size * 0.8
+                width_factor = shape.width / 4.0
+                stroke_width = max(3.0, square_size * 0.08 * width_factor)
+                diameter = square_size * 0.88
                 margin = (square_size - diameter) / 2
                 ellipse = QGraphicsEllipseItem(margin, margin, diameter, diameter)
                 ellipse.setPos(orig_pos)
                 ellipse.setBrush(QBrush(Qt.transparent))
                 pen = QPen(parse_color(shape.color))
-                pen.setWidthF(shape.width)
+                pen.setWidthF(stroke_width)
+                pen.setCapStyle(Qt.RoundCap)
+                pen.setJoinStyle(Qt.RoundJoin)
                 ellipse.setPen(pen)
                 ellipse.setZValue(0.5)
                 self.addItem(ellipse)
@@ -299,7 +303,9 @@ class BoardScene(QGraphicsScene):
 
             elif shape.type == "cross":
                 orig_pos = self.get_square_pos(shape.orig, square_size, orientation)
-                margin = square_size * 0.2
+                width_factor = shape.width / 4.0
+                stroke_width = max(3.0, square_size * 0.08 * width_factor)
+                margin = square_size * 0.18
                 path = QPainterPath()
                 path.moveTo(orig_pos.x() + margin, orig_pos.y() + margin)
                 path.lineTo(
@@ -311,7 +317,7 @@ class BoardScene(QGraphicsScene):
 
                 cross_item = QGraphicsPathItem(path)
                 pen = QPen(parse_color(shape.color))
-                pen.setWidthF(shape.width)
+                pen.setWidthF(stroke_width)
                 pen.setCapStyle(Qt.RoundCap)
                 cross_item.setPen(pen)
                 cross_item.setZValue(0.5)
@@ -334,48 +340,79 @@ class BoardScene(QGraphicsScene):
 
                 ux = dx / length
                 uy = dy / length
+                nx = -uy
+                ny = ux
 
-                start_margin = square_size * 0.3
-                end_margin = square_size * 0.35
+                width_factor = shape.width / 4.0
+                shaft_width = max(3.0, square_size * 0.16 * width_factor)
+                head_len = max(10.0, square_size * 0.38 * width_factor)
+                wing_w = max(6.0, square_size * 0.30 * width_factor)
+                half_w = shaft_width / 2.0
 
-                if length > (start_margin + end_margin):
+                start_margin = square_size * 0.18
+                end_margin = square_size * 0.18
+
+                if length > (start_margin + end_margin + head_len):
                     start_pt = p1 + QPointF(ux * start_margin, uy * start_margin)
                     end_pt = p2 - QPointF(ux * end_margin, uy * end_margin)
                 else:
-                    start_pt = p1 + QPointF(ux * length * 0.1, uy * length * 0.1)
-                    end_pt = p2 - QPointF(ux * length * 0.2, uy * length * 0.2)
+                    start_pt = p1 + QPointF(
+                        ux * min(start_margin, length * 0.15),
+                        uy * min(start_margin, length * 0.15),
+                    )
+                    end_pt = p2 - QPointF(
+                        ux * min(end_margin, length * 0.15),
+                        uy * min(end_margin, length * 0.15),
+                    )
+                    actual_len = (
+                        (end_pt.x() - start_pt.x()) ** 2
+                        + (end_pt.y() - start_pt.y()) ** 2
+                    ) ** 0.5
+                    if actual_len <= 0:
+                        continue
+                    head_len = min(head_len, actual_len * 0.6)
+                    wing_w = head_len * (0.30 / 0.38)
+                    shaft_width = min(shaft_width, head_len * (0.16 / 0.38))
+                    half_w = shaft_width / 2.0
 
-                seg_dx = end_pt.x() - start_pt.x()
-                seg_dy = end_pt.y() - start_pt.y()
-                seg_len = (seg_dx**2 + seg_dy**2) ** 0.5
-                if seg_len == 0:
-                    continue
+                base_pt = end_pt - QPointF(ux * head_len, uy * head_len)
 
-                arrow_size = max(12.0, shape.width * 3.0)
-                wing_width = arrow_size * 0.6
+                p_tl = start_pt + QPointF(nx * half_w, ny * half_w)
+                p_tr = start_pt - QPointF(nx * half_w, ny * half_w)
+                p_hl = base_pt + QPointF(nx * half_w, ny * half_w)
+                p_hr = base_pt - QPointF(nx * half_w, ny * half_w)
+                p_wl = base_pt + QPointF(nx * wing_w, ny * wing_w)
+                p_wr = base_pt - QPointF(nx * wing_w, ny * wing_w)
 
-                base_pt = end_pt - QPointF(ux * arrow_size, uy * arrow_size)
-                wing_pt1 = base_pt + QPointF(-uy * wing_width, ux * wing_width)
-                wing_pt2 = base_pt - QPointF(-uy * wing_width, ux * wing_width)
+                back_ux, back_uy = -ux, -uy
+                tail_tip = start_pt + QPointF(back_ux * half_w, back_uy * half_w)
+                k = 0.5522847498 * half_w
 
                 path = QPainterPath()
-                path.moveTo(start_pt)
-                path.lineTo(base_pt)
-
-                path.moveTo(wing_pt1)
+                path.moveTo(p_tl)
+                path.lineTo(p_hl)
+                path.lineTo(p_wl)
                 path.lineTo(end_pt)
-                path.lineTo(wing_pt2)
+                path.lineTo(p_wr)
+                path.lineTo(p_hr)
+                path.lineTo(p_tr)
+
+                path.cubicTo(
+                    p_tr + QPointF(back_ux * k, back_uy * k),
+                    tail_tip - QPointF(nx * k, ny * k),
+                    tail_tip,
+                )
+                path.cubicTo(
+                    tail_tip + QPointF(nx * k, ny * k),
+                    p_tl + QPointF(back_ux * k, back_uy * k),
+                    p_tl,
+                )
                 path.closeSubpath()
 
                 arrow_item = QGraphicsPathItem(path)
                 color = parse_color(shape.color)
 
-                pen = QPen(color)
-                pen.setWidthF(shape.width)
-                pen.setCapStyle(Qt.RoundCap)
-                pen.setJoinStyle(Qt.RoundJoin)
-
-                arrow_item.setPen(pen)
+                arrow_item.setPen(QPen(Qt.NoPen))
                 arrow_item.setBrush(QBrush(color))
                 arrow_item.setZValue(0.5)
                 self.addItem(arrow_item)
