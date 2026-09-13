@@ -89,6 +89,62 @@ class BoardScene(QGraphicsScene):
         true_board = chess.Board(state.fen)
         theme = state.theme
 
+        if state.preview is not None:
+            # Ghost/preview mode: apply opacity to piece items
+            opacity = state.preview.opacity
+            for item in self.piece_items.values():
+                item.setOpacity(opacity)
+
+            if state.preview.dim_board:
+                dim_item = QGraphicsRectItem(0, 0, square_size * 8, square_size * 8)
+                dim_item.setBrush(QBrush(QColor(0, 0, 0, 25)))
+                dim_item.setPen(QPen(Qt.NoPen))
+                dim_item.setZValue(-0.8)
+                self.addItem(dim_item)
+                self.highlights["custom"].append(dim_item)
+
+            if state.preview.last_move:
+                hl_color = parse_color(theme.get("lastMove", "rgba(255, 255, 0, 0.5)"))
+                self._add_highlight(
+                    state.preview.last_move.from_square,
+                    hl_color,
+                    "last_move",
+                    square_size,
+                    orientation,
+                )
+                self._add_highlight(
+                    state.preview.last_move.to_square,
+                    hl_color,
+                    "last_move",
+                    square_size,
+                    orientation,
+                )
+
+            if visual_board.is_check():
+                king_square = visual_board.king(visual_board.turn)
+                if king_square is not None:
+                    check_color = parse_color(
+                        theme.get("check", "rgba(255, 0, 0, 0.8)")
+                    )
+                    self._add_check_highlight(
+                        king_square, square_size, orientation, check_color
+                    )
+
+            # Custom Shapes & Preview Shape for preview mode
+            shapes_to_draw = (
+                state.preview.shapes.copy()
+                if state.preview.shapes
+                else state.shapes.copy()
+            )
+            if state.preview_shape:
+                shapes_to_draw.append(state.preview_shape)
+            self._update_shapes(shapes_to_draw, square_size, orientation)
+            return
+
+        # Normal mode: reset piece opacity
+        for item in self.piece_items.values():
+            item.setOpacity(1.0)
+
         # Legal moves (dots or circles)
         if state.selected is not None and not state.view_only and not state.editable:
             dests = []

@@ -4,7 +4,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, QTimer
 from PyQt5.QtGui import QPainter
 from typing import Optional
 
-from .models import BoardState, BoardHighlight, BoardShape
+from .models import BoardState, BoardHighlight, BoardShape, PreviewConfig
 from .scene import BoardScene, SquareItem
 from .pieces import PieceItem
 
@@ -38,7 +38,9 @@ class BoardView(QGraphicsView):
         self.update_board()
 
     def get_visual_board(self) -> chess.Board:
-        """Returns the board state predicted by the current queue of premoves."""
+        """Returns the board state predicted by the current queue of premoves (or preview)."""
+        if self._state.preview is not None:
+            return chess.Board(self._state.preview.fen)
         if self._state.editable:
             return chess.Board(self._state.fen)
         board = chess.Board(self._state.fen)
@@ -193,10 +195,91 @@ class BoardView(QGraphicsView):
                 for akey, avalue in value.items():
                     if hasattr(self._state.animation, akey):
                         setattr(self._state.animation, akey, avalue)
+            elif key == "preview":
+                if value is None:
+                    self._state.preview = None
+                elif isinstance(value, PreviewConfig):
+                    self._state.preview = value
+                elif isinstance(value, dict):
+                    fen = value.get("fen", self._state.fen)
+                    lm = value.get("lastMove", value.get("last_move", None))
+                    if isinstance(lm, str):
+                        lm = chess.Move.from_uci(lm)
+                    shapes = value.get("shapes", [])
+                    parsed_shapes = []
+                    for s in shapes:
+                        if isinstance(s, dict):
+                            s_copy = s.copy()
+                            if "orig" in s_copy and isinstance(s_copy["orig"], str):
+                                s_copy["orig"] = chess.parse_square(s_copy["orig"])
+                            if "dest" in s_copy and isinstance(s_copy["dest"], str):
+                                s_copy["dest"] = chess.parse_square(s_copy["dest"])
+                            parsed_shapes.append(BoardShape(**s_copy))
+                        elif isinstance(s, BoardShape):
+                            parsed_shapes.append(s)
+                    opacity = float(value.get("opacity", 0.80))
+                    dim_board = bool(
+                        value.get("dimBoard", value.get("dim_board", False))
+                    )
+                    self._state.preview = PreviewConfig(
+                        fen=fen,
+                        last_move=lm,
+                        shapes=parsed_shapes,
+                        opacity=opacity,
+                        dim_board=dim_board,
+                    )
             elif hasattr(self._state, key):
                 setattr(self._state, key, value)
 
         self.update_board()
+
+    def set_preview(
+        self,
+        fen: str,
+        last_move: Optional[chess.Move | str] = None,
+        shapes: Optional[list] = None,
+        opacity: float = 0.80,
+        dim_board: bool = False,
+    ):
+        """Set a temporary ghost/preview position without altering the real game state."""
+        parsed_last_move = None
+        if isinstance(last_move, str):
+            parsed_last_move = chess.Move.from_uci(last_move)
+        elif isinstance(last_move, chess.Move):
+            parsed_last_move = last_move
+
+        parsed_shapes = []
+        if shapes:
+            for s in shapes:
+                if isinstance(s, dict):
+                    s_copy = s.copy()
+                    if "orig" in s_copy and isinstance(s_copy["orig"], str):
+                        s_copy["orig"] = chess.parse_square(s_copy["orig"])
+                    if "dest" in s_copy and isinstance(s_copy["dest"], str):
+                        s_copy["dest"] = chess.parse_square(s_copy["dest"])
+                    parsed_shapes.append(BoardShape(**s_copy))
+                elif isinstance(s, BoardShape):
+                    parsed_shapes.append(s)
+
+        self._state.preview = PreviewConfig(
+            fen=fen,
+            last_move=parsed_last_move,
+            shapes=parsed_shapes,
+            opacity=opacity,
+            dim_board=dim_board,
+        )
+        self.update_board()
+
+    def clear_preview(self):
+        """Clear the preview position and return to the real game state immediately."""
+        if self._state.preview is not None:
+            self._state.preview = None
+            self.update_board()
+
+    @property
+    def is_previewing(self) -> bool:
+        """Returns True if a temporary preview is currently active."""
+        return self._state.preview is not None
 
     def _handle_fen_change(self, shapes_passed=False, highlights_passed=False):
         if not shapes_passed:
@@ -293,6 +376,9 @@ class BoardView(QGraphicsView):
         self.setpiece_at(square, piece, color)
 
     def mousePressEvent(self, event):
+        if self._state.preview is not None:
+            return
+
         if self._state.view_only:
             super().mousePressEvent(event)
             return
@@ -404,6 +490,9 @@ class BoardView(QGraphicsView):
         self._state.dragging = True
 
     def mouseMoveEvent(self, event):
+        if self._state.preview is not None:
+            return
+
         if self._drag_piece:
             pos = self.mapToScene(event.pos())
             max_coord = self._square_size * 8
@@ -444,6 +533,9 @@ class BoardView(QGraphicsView):
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
+        if self._state.preview is not None:
+            return
+
         if event.button() == Qt.RightButton and getattr(
             self, "_is_drawing_shape", False
         ):

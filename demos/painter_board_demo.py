@@ -28,10 +28,10 @@ from PyQt5.QtCore import Qt
 # Make sure the src package is on the path
 import os
 
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.board import BoardView
-from src.painter_board import  PainterChessBoard
+from src.painter_board import PainterChessBoard
 
 
 class DemoWindow(QMainWindow):

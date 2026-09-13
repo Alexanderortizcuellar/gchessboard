@@ -24,7 +24,12 @@ Covers:
   20. Verify existing main tests not broken (import sanity check)
 """
 
+import os
 import sys
+
+# Ensure repository root is on sys.path for direct script execution
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import chess
 import pytest
 

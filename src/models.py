@@ -39,6 +39,15 @@ class BoardShape:
 
 
 @dataclass
+class PreviewConfig:
+    fen: str
+    last_move: Optional[chess.Move] = None
+    shapes: List[BoardShape] = field(default_factory=list)
+    opacity: float = 0.80
+    dim_board: bool = False
+
+
+@dataclass
 class BoardState:
     fen: str = chess.STARTING_FEN
     orientation: chess.Color = chess.WHITE
@@ -56,6 +65,7 @@ class BoardState:
     shapes: List[BoardShape] = field(default_factory=list)
     draw_shapes: bool = True
     preview_shape: Optional[BoardShape] = None
+    preview: Optional[PreviewConfig] = None
     theme: dict = field(
         default_factory=lambda: {
             "light": "#dee3e6",

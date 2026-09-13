@@ -37,9 +37,12 @@ pip install PyQt5 python-chess
 
 The project is modularized for maintainability:
 
-- `src/models.py`: Defines the `BoardState` and configuration dataclasses.
-- `src/scene.py`: Implements `BoardScene`, handling rendering, highlights, and animations.
-- `src/view.py`: Implements `BoardView`, handling user input and coordinate mapping.
+- `src/models.py`: Defines `BoardState`, `PreviewConfig`, `BoardHighlight`, `BoardShape`, and configuration dataclasses.
+- `src/scene.py`: Implements `BoardScene` (QGraphicsScene) handling SVG piece rendering, shapes, highlights, and animations.
+- `src/view.py`: Implements `BoardView` (QGraphicsView) handling user input and coordinate mapping.
+- `src/painter_board.py`: Implements `PainterChessBoard` (QWidget + QPainter + MERIFONT glyph caching).
+- `src/static_board.py`: Implements `StaticChessBoard` / `LightChessBoard` (ultra-lightweight diagram & thumbnail widget).
+- `src/engine.py`: Implements `ChessEngine` (QProcess-based UCI engine communication).
 - `src/pieces.py`: Handles SVG piece rendering and caching.
 
 ## Public API

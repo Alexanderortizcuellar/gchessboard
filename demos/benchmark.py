@@ -24,7 +24,7 @@ import chess
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QElapsedTimer
 
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.board import BoardView, PainterChessBoard
 

@@ -24,7 +24,7 @@ class MainWindow(QMainWindow):
 
         self.board_view = PainterChessBoard()
         self.board_view.moveMade.connect(self.handle_move)
-        self.board_view.set(animation={"enabled": True, "duration": 16000})
+        self.board_view.set(animation={"enabled": True, "duration": 300})
         layout.addWidget(self.board_view)
 
         self.update_board_config()

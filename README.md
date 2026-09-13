@@ -94,6 +94,24 @@ window.show()
 sys.exit(app.exec_())
 ```
 
+### 3. Lightweight Static Position Display (`StaticChessBoard` / `LightChessBoard`)
+
+An ultra-lightweight static chessboard widget with zero interaction overhead and a shared glyph cache — ideal for puzzle lists, game thumbnails, opening trees, and offline diagram generation.
+
+```python
+from src.static_board import StaticChessBoard
+
+# Create a 200x200 static thumbnail
+board = StaticChessBoard(
+    position="r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
+    size=200,
+    show_coordinates=False
+)
+
+# Export directly to QPixmap or QImage without displaying
+pixmap = board.render_to_pixmap(width=400)
+```
+
 ---
 
 ## Public API Reference
@@ -117,8 +135,14 @@ Both board implementations provide a unified `.set()` method:
   - `duration`: `int` (milliseconds).
 - `shapes`: `List[dict | BoardShape]` — Shapes to render (arrows, circles, crosses).
 - `drawShapes`: `bool` — Enable/disable interactive right-click shape drawing.
-- `customHighlights`: `dict` — Map of squares to colors (e.g., `{chess.E4: "rgba(255, 0, 0, 0.5)"}`).
 - `theme`: `dict` — Board color theme (keys: `light`, `dark`, `lastMove`, `selected`, `check`, `premove`).
+- `preview`: `Optional[dict | PreviewConfig]` — Temporary ghost/preview position overlay (`fen`, `lastMove`, `shapes`, `opacity`, `dimBoard`). Set to `None` to clear.
+
+### Preview API Methods
+
+- `board.set_preview(fen, last_move=None, shapes=None, opacity=0.80, dim_board=False)`: Set a non-destructive temporary preview position.
+- `board.clear_preview()`: Clear the preview and restore the active game state immediately.
+- `board.is_previewing`: Property returning `True` if a temporary preview is currently active.
 
 ### Signals
 
@@ -140,13 +164,21 @@ Both board implementations provide a unified `.set()` method:
   ```bash
   python main_painter.py
   ```
+- **Static Board Move-by-Move Game Grid Demo**:
+  ```bash
+  python demos/static_board_game_grid_demo.py
+  ```
+- **Preview State GUI Demo**:
+  ```bash
+  python demos/preview_demo.py
+  ```
 - **Side-by-Side Dual Renderer Comparison**:
   ```bash
-  python painter_board_demo.py
+  python demos/painter_board_demo.py
   ```
 - **Performance Benchmark**:
   ```bash
-  python benchmark.py
+  python demos/benchmark.py
   ```
 
 ---

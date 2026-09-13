@@ -53,7 +53,7 @@ from PyQt5.QtGui import (
     QRadialGradient,
 )
 
-from .models import BoardState, BoardHighlight, BoardShape
+from .models import BoardState, BoardHighlight, BoardShape, PreviewConfig
 
 
 # ---------------------------------------------------------------------------
@@ -318,10 +318,91 @@ class PainterChessBoard(QWidget):
                 for akey, avalue in value.items():
                     if hasattr(self._state.animation, akey):
                         setattr(self._state.animation, akey, avalue)
+            elif key == "preview":
+                if value is None:
+                    self._state.preview = None
+                elif isinstance(value, PreviewConfig):
+                    self._state.preview = value
+                elif isinstance(value, dict):
+                    fen = value.get("fen", self._state.fen)
+                    lm = value.get("lastMove", value.get("last_move", None))
+                    if isinstance(lm, str):
+                        lm = chess.Move.from_uci(lm)
+                    shapes = value.get("shapes", [])
+                    parsed_shapes = []
+                    for s in shapes:
+                        if isinstance(s, dict):
+                            s_copy = s.copy()
+                            if "orig" in s_copy and isinstance(s_copy["orig"], str):
+                                s_copy["orig"] = chess.parse_square(s_copy["orig"])
+                            if "dest" in s_copy and isinstance(s_copy["dest"], str):
+                                s_copy["dest"] = chess.parse_square(s_copy["dest"])
+                            parsed_shapes.append(BoardShape(**s_copy))
+                        elif isinstance(s, BoardShape):
+                            parsed_shapes.append(s)
+                    opacity = float(value.get("opacity", 0.80))
+                    dim_board = bool(
+                        value.get("dimBoard", value.get("dim_board", False))
+                    )
+                    self._state.preview = PreviewConfig(
+                        fen=fen,
+                        last_move=lm,
+                        shapes=parsed_shapes,
+                        opacity=opacity,
+                        dim_board=dim_board,
+                    )
             elif hasattr(self._state, key):
                 setattr(self._state, key, value)
 
         self.update()
+
+    def set_preview(
+        self,
+        fen: str,
+        last_move: Optional[chess.Move | str] = None,
+        shapes: Optional[list] = None,
+        opacity: float = 0.80,
+        dim_board: bool = False,
+    ):
+        """Set a temporary ghost/preview position without altering the real game state."""
+        parsed_last_move = None
+        if isinstance(last_move, str):
+            parsed_last_move = chess.Move.from_uci(last_move)
+        elif isinstance(last_move, chess.Move):
+            parsed_last_move = last_move
+
+        parsed_shapes = []
+        if shapes:
+            for s in shapes:
+                if isinstance(s, dict):
+                    s_copy = s.copy()
+                    if "orig" in s_copy and isinstance(s_copy["orig"], str):
+                        s_copy["orig"] = chess.parse_square(s_copy["orig"])
+                    if "dest" in s_copy and isinstance(s_copy["dest"], str):
+                        s_copy["dest"] = chess.parse_square(s_copy["dest"])
+                    parsed_shapes.append(BoardShape(**s_copy))
+                elif isinstance(s, BoardShape):
+                    parsed_shapes.append(s)
+
+        self._state.preview = PreviewConfig(
+            fen=fen,
+            last_move=parsed_last_move,
+            shapes=parsed_shapes,
+            opacity=opacity,
+            dim_board=dim_board,
+        )
+        self.update()
+
+    def clear_preview(self):
+        """Clear the preview position and return to the real game state immediately."""
+        if self._state.preview is not None:
+            self._state.preview = None
+            self.update()
+
+    @property
+    def is_previewing(self) -> bool:
+        """Returns True if a temporary preview is currently active."""
+        return self._state.preview is not None
 
     def set_fen(self, fen: str):
         self.set(fen=fen)
@@ -446,7 +527,9 @@ class PainterChessBoard(QWidget):
         return self._point_to_square(QPointF(pos))
 
     def get_visual_board(self) -> chess.Board:
-        """Returns the board predicted by the current premove queue."""
+        """Returns the board predicted by the current premove queue (or preview)."""
+        if self._state.preview is not None:
+            return chess.Board(self._state.preview.fen)
         if self._state.editable:
             return chess.Board(self._state.fen)
         board = chess.Board(self._state.fen)
@@ -709,6 +792,35 @@ class PainterChessBoard(QWidget):
         premove_color = _parse_color(theme.get("premove", "rgba(20,100,200,0.5)"))
         check_color = _parse_color(theme.get("check", "rgba(255,0,0,0.8)"))
 
+        if self._state.preview is not None:
+            if self._state.preview.dim_board:
+                painter.fillRect(QRectF(0, 0, sq * 8, sq * 8), QColor(0, 0, 0, 25))
+
+            if self._state.preview.last_move:
+                for s in (
+                    self._state.preview.last_move.from_square,
+                    self._state.preview.last_move.to_square,
+                ):
+                    self._fill_square(painter, s, sq, last_move_color)
+
+            if visual_board.is_check():
+                king_sq = visual_board.king(visual_board.turn)
+                if king_sq is not None:
+                    col, row = self._square_to_col_row(king_sq)
+                    cx = col * sq + sq / 2.0
+                    cy = row * sq + sq / 2.0
+                    grad = QRadialGradient(cx, cy, sq / 2.0)
+                    c1 = QColor(check_color)
+                    c2 = QColor(check_color)
+                    c2.setAlpha(c1.alpha() // 2)
+                    c3 = QColor(check_color)
+                    c3.setAlpha(0)
+                    grad.setColorAt(0.0, c1)
+                    grad.setColorAt(0.5, c2)
+                    grad.setColorAt(1.0, c3)
+                    painter.fillRect(QRectF(col * sq, row * sq, sq, sq), QBrush(grad))
+            return
+
         # Last move
         if self._state.last_move:
             for s in (
@@ -820,7 +932,10 @@ class PainterChessBoard(QWidget):
             painter.restore()
 
     def _draw_shapes(self, painter, sq):
-        shapes = list(self._state.shapes)
+        if self._state.preview is not None and self._state.preview.shapes:
+            shapes = list(self._state.preview.shapes)
+        else:
+            shapes = list(self._state.shapes)
         if self._state.preview_shape:
             shapes.append(self._state.preview_shape)
 
@@ -955,6 +1070,11 @@ class PainterChessBoard(QWidget):
 
     def _draw_pieces(self, painter, sq, visual_board: chess.Board):
         """Draw all static pieces (skip drag square and animation destination)."""
+        is_preview = self._state.preview is not None
+        if is_preview:
+            painter.save()
+            painter.setOpacity(self._state.preview.opacity)
+
         for square in chess.SQUARES:
             if square == self._drag_square:
                 continue
@@ -966,6 +1086,9 @@ class PainterChessBoard(QWidget):
                 if pixmap:
                     col, row = self._square_to_col_row(square)
                     painter.drawPixmap(int(col * sq), int(row * sq), pixmap)
+
+        if is_preview:
+            painter.restore()
 
     def _draw_animated_piece(self, painter, sq):
         if (
@@ -1036,6 +1159,9 @@ class PainterChessBoard(QWidget):
     # -----------------------------------------------------------------------
 
     def mousePressEvent(self, event):
+        if self._state.preview is not None:
+            return
+
         if self._state.view_only:
             return
 
@@ -1155,6 +1281,9 @@ class PainterChessBoard(QWidget):
                 self.update()
 
     def mouseMoveEvent(self, event):
+        if self._state.preview is not None:
+            return
+
         pos = QPointF(event.pos())
 
         if self._drag_square is not None:
@@ -1190,6 +1319,9 @@ class PainterChessBoard(QWidget):
                 self.update()
 
     def mouseReleaseEvent(self, event):
+        if self._state.preview is not None:
+            return
+
         # --- Right-click shape drawing ---
         if event.button() == Qt.RightButton and self._is_drawing_shape:
             self._is_drawing_shape = False
