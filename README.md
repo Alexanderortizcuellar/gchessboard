@@ -140,8 +140,8 @@ Both board implementations provide a unified `.set()` method:
 
 ### Preview API Methods
 
-- `board.set_preview(fen, last_move=None, shapes=None, opacity=0.80, dim_board=False)`: Set a non-destructive temporary preview position.
-- `board.clear_preview()`: Clear the preview and restore the active game state immediately.
+- `board.set_preview(fen, last_move=None, shapes=None, opacity=0.80, dim_board=False, animate=False)`: Set a non-destructive temporary preview position (statically by default, or with `animate=True` to slide pieces).
+- `board.clear_preview(animate=False)`: Clear the preview and restore the active game state immediately.
 - `board.is_previewing`: Property returning `True` if a temporary preview is currently active.
 
 ### Signals
@@ -156,6 +156,10 @@ Both board implementations provide a unified `.set()` method:
 
 ## Running Demos & Benchmarks
 
+- **Interactive PGN Navigator & Animation Stress-Tester**:
+  ```bash
+  python demos/pgn_navigator_demo.py
+  ```
 - **Interactive SVG Board**:
   ```bash
   python main.py

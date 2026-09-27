@@ -7,7 +7,13 @@ from PyQt5.QtWidgets import (
     QGraphicsPathItem,
     QGraphicsItem,
 )
-from PyQt5.QtCore import Qt, QPointF, QPropertyAnimation, QParallelAnimationGroup
+from PyQt5.QtCore import (
+    Qt,
+    QPointF,
+    QPropertyAnimation,
+    QParallelAnimationGroup,
+    QEasingCurve,
+)
 from PyQt5.QtGui import QBrush, QColor, QFont, QPen, QRadialGradient, QPainterPath
 from typing import Dict, Optional
 
@@ -520,6 +526,18 @@ class BoardScene(QGraphicsScene):
         new_board = chess.Board(fen)
         old_board = chess.Board(self._current_fen) if self._current_fen else None
 
+        # Snap in-flight animations to end positions before clearing
+        if self._anim_group.animationCount() > 0:
+            for i in range(self._anim_group.animationCount()):
+                anim = self._anim_group.animationAt(i)
+                if isinstance(anim, QPropertyAnimation):
+                    target_item = anim.targetObject()
+                    if target_item:
+                        try:
+                            _ = target_item.zValue()
+                            target_item.setPos(anim.endValue())
+                        except RuntimeError:
+                            pass
         self._anim_group.stop()
         self._anim_group.clear()
 
@@ -532,6 +550,7 @@ class BoardScene(QGraphicsScene):
                     continue
 
                 matched_item = None
+                is_promotion = False
                 if square in self.piece_items:
                     item = self.piece_items[square]
                     try:
@@ -556,6 +575,28 @@ class BoardScene(QGraphicsScene):
                         except RuntimeError:
                             self.piece_items.pop(old_square)
 
+                # Promotion match: pawn moved to promotion rank and morphed into piece
+                if not matched_item and piece.piece_type != chess.PAWN:
+                    is_promo_rank = (chess.square_rank(square) == 7 and piece.color == chess.WHITE) or (
+                        chess.square_rank(square) == 0 and piece.color == chess.BLACK
+                    )
+                    if is_promo_rank:
+                        expected_pawn_rank = 6 if piece.color == chess.WHITE else 1
+                        for old_square, old_item in list(self.piece_items.items()):
+                            try:
+                                _ = old_item.zValue()
+                                if (
+                                    old_item.piece == chess.Piece(chess.PAWN, piece.color)
+                                    and chess.square_rank(old_square) == expected_pawn_rank
+                                    and abs(chess.square_file(old_square) - chess.square_file(square)) <= 1
+                                    and new_board.piece_at(old_square) != old_item.piece
+                                ):
+                                    matched_item = self.piece_items.pop(old_square)
+                                    is_promotion = True
+                                    break
+                            except RuntimeError:
+                                self.piece_items.pop(old_square)
+
                 if matched_item:
                     matched_item.set_square(square)
                     matched_item.set_square_size(square_size)
@@ -571,9 +612,17 @@ class BoardScene(QGraphicsScene):
                     ):
                         anim = QPropertyAnimation(matched_item, b"pos")
                         anim.setDuration(animation_config.duration)
+                        anim.setEasingCurve(QEasingCurve.OutCubic)
                         anim.setEndValue(target_pos)
+                        if is_promotion:
+                            promoted_piece = piece
+                            anim.finished.connect(
+                                lambda it=matched_item, p=promoted_piece: it.set_piece(p)
+                            )
                         self._anim_group.addAnimation(anim)
                     else:
+                        if is_promotion:
+                            matched_item.set_piece(piece)
                         matched_item.setPos(target_pos)
                 else:
                     piece_item = PieceItem(piece, square, square_size)

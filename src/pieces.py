@@ -45,3 +45,9 @@ class PieceItem(QGraphicsSvgItem):
 
     def set_square(self, square: chess.Square):
         self.square = square
+
+    def set_piece(self, piece: chess.Piece):
+        if self.piece != piece:
+            self.piece = piece
+            self.setSharedRenderer(RendererCache.get_renderer(piece))
+            self._update_scale()

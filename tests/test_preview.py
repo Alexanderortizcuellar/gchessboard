@@ -172,9 +172,26 @@ def test_static_board_preview(qapp):
     pixmap = board.render_to_pixmap(200, 200)
     assert not pixmap.isNull()
 
-    board.clear_preview()
+def test_preview_animate_option(qapp):
+    board = BoardView()
+    board.set(animation={"enabled": True, "duration": 300})
+    preview_fen = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+
+    # Default is animate=False (static)
+    board.set_preview(preview_fen, animate=False)
+    assert board.is_previewing is True
+    assert board.scene()._anim_group.animationCount() == 0
+
+    board.clear_preview(animate=False)
     assert board.is_previewing is False
-    assert board.fen == chess.STARTING_FEN
+
+    # Explicit animate=True
+    board.set_preview(preview_fen, animate=True)
+    assert board.is_previewing is True
+    assert board.scene()._anim_group.animationCount() > 0
+
+    board.clear_preview(animate=False)
+    assert board.is_previewing is False
 
 
 if __name__ == "__main__":

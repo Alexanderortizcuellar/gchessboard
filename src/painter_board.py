@@ -126,23 +126,23 @@ def _build_pixmap_cache(font_family: str, sq_size: float) -> Dict:
         p.setRenderHint(QPainter.Antialiasing)
         p.setRenderHint(QPainter.TextAntialiasing)
 
-        if p_color == chess.WHITE:
-            # Extract the largest sub-polygon (outer contour) and fill white
-            polys = path.toSubpathPolygons()
-            if polys:
-                outer = max(
-                    polys,
-                    key=lambda poly: (
-                        poly.boundingRect().width() * poly.boundingRect().height()
-                    ),
-                )
-                outer_path = QPainterPath()
-                outer_path.addPolygon(outer)
-                p.fillPath(outer_path, QBrush(QColor("#ffffff")))
-            # Draw the full glyph (outlines + inner details) in black on top
-            p.fillPath(path, QBrush(QColor("#000000")))
-        else:
-            p.fillPath(path, QBrush(QColor("#000000")))
+        # Extract the largest sub-polygon (outer contour) and fill with solid white backing
+        # This provides white bodies for white pieces, and fills inner detail cutouts (eyes, slits)
+        # with solid white for black pieces instead of leaving transparent holes.
+        polys = path.toSubpathPolygons()
+        if polys:
+            outer = max(
+                polys,
+                key=lambda poly: (
+                    poly.boundingRect().width() * poly.boundingRect().height()
+                ),
+            )
+            outer_path = QPainterPath()
+            outer_path.addPolygon(outer)
+            p.fillPath(outer_path, QBrush(QColor("#ffffff")))
+
+        # Draw the glyph (outlines for white pieces, solid body with cutouts for black pieces) in black
+        p.fillPath(path, QBrush(QColor("#000000")))
 
         p.end()
         cache[(p_type, p_color)] = pixmap
@@ -363,6 +363,7 @@ class PainterChessBoard(QWidget):
         shapes: Optional[list] = None,
         opacity: float = 0.80,
         dim_board: bool = False,
+        animate: bool = False,
     ):
         """Set a temporary ghost/preview position without altering the real game state."""
         parsed_last_move = None
@@ -393,7 +394,7 @@ class PainterChessBoard(QWidget):
         )
         self.update()
 
-    def clear_preview(self):
+    def clear_preview(self, animate: bool = False):
         """Clear the preview position and return to the real game state immediately."""
         if self._state.preview is not None:
             self._state.preview = None
@@ -633,7 +634,7 @@ class PainterChessBoard(QWidget):
             if (chess.square_rank(to_sq) == 7 and piece.color == chess.WHITE) or (
                 chess.square_rank(to_sq) == 0 and piece.color == chess.BLACK
             ):
-                move.promotion = self._ask_promotion(piece.color)
+                move.promotion = chess.QUEEN
         return move
 
     def _ask_promotion(self, color: chess.Color) -> chess.PieceType:
@@ -713,6 +714,24 @@ class PainterChessBoard(QWidget):
                     break
             if from_sq is not None:
                 break
+
+        # Promotion move detection (pawn morphed into queen/knight/rook/bishop)
+        if from_sq is None:
+            for d_sq, d_piece in disappeared:
+                if d_piece.piece_type == chess.PAWN:
+                    for a_sq, a_piece in appeared:
+                        if (
+                            a_piece.color == d_piece.color
+                            and abs(chess.square_file(d_sq) - chess.square_file(a_sq)) <= 1
+                            and (
+                                (d_piece.color == chess.WHITE and chess.square_rank(d_sq) == 6 and chess.square_rank(a_sq) == 7)
+                                or (d_piece.color == chess.BLACK and chess.square_rank(d_sq) == 1 and chess.square_rank(a_sq) == 0)
+                            )
+                        ):
+                            from_sq, to_sq, piece = d_sq, a_sq, d_piece
+                            break
+                    if from_sq is not None:
+                        break
 
         if from_sq is not None and to_sq is not None and piece is not None:
             if to_sq == self._suppress_anim_square:

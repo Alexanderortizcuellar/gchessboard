@@ -98,7 +98,11 @@ class BoardView(QGraphicsView):
                 break
         self._state.premoves = valid_queue
 
-    def update_board(self, instant_square: Optional[chess.Square] = None):
+    def update_board(
+        self,
+        instant_square: Optional[chess.Square] = None,
+        animate: Optional[bool] = None,
+    ):
         sq = (
             instant_square if instant_square is not None else self._suppress_anim_square
         )
@@ -110,10 +114,16 @@ class BoardView(QGraphicsView):
         visual_board = self.get_visual_board()
 
         anim_config = self._state.animation
-        if self._state.editable:
+        if self._state.editable or animate is False:
             from .models import AnimationConfig
 
             anim_config = AnimationConfig(enabled=False)
+        elif animate is True:
+            from .models import AnimationConfig
+
+            anim_config = AnimationConfig(
+                enabled=True, duration=self._state.animation.duration
+            )
 
         fen_changed = self.scene().set_fen(
             visual_board.fen(),
@@ -240,6 +250,7 @@ class BoardView(QGraphicsView):
         shapes: Optional[list] = None,
         opacity: float = 0.80,
         dim_board: bool = False,
+        animate: bool = False,
     ):
         """Set a temporary ghost/preview position without altering the real game state."""
         parsed_last_move = None
@@ -268,13 +279,13 @@ class BoardView(QGraphicsView):
             opacity=opacity,
             dim_board=dim_board,
         )
-        self.update_board()
+        self.update_board(animate=animate)
 
-    def clear_preview(self):
+    def clear_preview(self, animate: bool = False):
         """Clear the preview position and return to the real game state immediately."""
         if self._state.preview is not None:
             self._state.preview = None
-            self.update_board()
+            self.update_board(animate=animate)
 
     @property
     def is_previewing(self) -> bool:

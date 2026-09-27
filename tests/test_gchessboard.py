@@ -184,3 +184,22 @@ def test_right_click_drawing(qapp):
     board_view.mousePressEvent(left_press_event)
 
     assert len(board_view._state.shapes) == 0
+
+
+def test_promotion_animation(qapp):
+    board_view = BoardView()
+    # FEN with White pawn at e7 ready to promote to e8
+    pre_promo_fen = "4k3/4P3/8/8/8/8/8/4K3 w - - 0 1"
+    post_promo_fen = "4Q3/8/8/8/8/8/8/4K3 b - - 0 1"
+
+    board_view.set(fen=pre_promo_fen, animation={"enabled": True, "duration": 200})
+    scene = board_view.scene()
+    assert chess.E7 in scene.piece_items
+    assert scene.piece_items[chess.E7].piece == chess.Piece(chess.PAWN, chess.WHITE)
+
+    # Set promoted FEN
+    board_view.set(fen=post_promo_fen)
+    assert chess.E8 in scene.piece_items
+    # The piece is tracked and queued for animation / morph
+    assert scene._anim_group.animationCount() > 0
+
