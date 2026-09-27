@@ -24,6 +24,7 @@ class MainWindow(QMainWindow):
 
         self.board_view = BoardView()
         self.board_view.moveMade.connect(self.handle_move)
+        self.board_view.set(animation={"enabled": True, "duration": 250})
         layout.addWidget(self.board_view)
 
         self.update_board_config()

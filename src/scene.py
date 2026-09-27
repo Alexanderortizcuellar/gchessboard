@@ -506,6 +506,10 @@ class BoardScene(QGraphicsScene):
             self._current_fen is None
         )  # Signaled by _create_board clearing current_fen
         if fen == self._current_fen and not size_changed and not theme_changed:
+            # If an animation is currently running for this FEN, let it finish smoothly
+            if self._anim_group.animationCount() > 0:
+                return False
+
             # Check if all pieces are physically in their correct positions.
             # If any piece has been dragged away, we bypass this early return.
             pieces_in_pos = True
